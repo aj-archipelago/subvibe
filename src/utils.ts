@@ -492,12 +492,7 @@ export class SubtitleUtils {
    * Detect and parse subtitle content in either SRT or VTT format
    */
   static detectAndParse(content: string): ParsedSubtitles {
-    // Check for WEBVTT header first
-    if (content.trim().startsWith('WEBVTT')) {
-      return parseVTT(content);
-    }
-
-    // Look at the first few non-empty lines
+    // Check for empty content first
     const lines = content.trim().split(/\r?\n/);
     const nonEmptyLines = lines.filter(line => line.trim());
 
@@ -511,6 +506,24 @@ export class SubtitleUtils {
           severity: 'error'
         }]
       };
+    }
+
+    // Check if content looks like a subtitle file
+    if (!SubtitleUtils.looksLikeSubtitle(content)) {
+      return {
+        type: 'unknown',
+        cues: [],
+        errors: [{
+          line: 1,
+          message: 'Content does not appear to be a subtitle file',
+          severity: 'error'
+        }]
+      };
+    }
+
+    // Check for WEBVTT header
+    if (content.trim().startsWith('WEBVTT')) {
+      return parseVTT(content);
     }
 
     // Check for SRT-style numeric index at start
