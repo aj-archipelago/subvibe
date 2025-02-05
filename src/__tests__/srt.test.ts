@@ -182,8 +182,9 @@ describe('SRT Generator', () => {
       }
     ];
 
-    const output = generateSRT(cues);
-    expect(output).toBe(
+    // Test with array of cues
+    const outputFromCues = generateSRT(cues);
+    expect(outputFromCues).toBe(
       '1\n' +
       '00:00:01,000 --> 00:00:04,000\n' +
       'Hello world!\n\n' +
@@ -191,6 +192,14 @@ describe('SRT Generator', () => {
       '00:00:05,000 --> 00:00:08,000\n' +
       'Second subtitle\n'
     );
+
+    // Test with ParsedSubtitles object
+    const parsedSubtitles = {
+      type: 'srt' as const,
+      cues
+    };
+    const outputFromParsed = generateSRT(parsedSubtitles);
+    expect(outputFromParsed).toBe(outputFromCues);
   });
 
   test('handles multi-line text', () => {

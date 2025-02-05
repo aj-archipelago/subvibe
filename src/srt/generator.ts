@@ -1,4 +1,4 @@
-import { SubtitleCue, TimeComponents } from '../types';
+import { SubtitleCue, TimeComponents, ParsedSubtitles } from '../types';
 
 function formatTimeComponent(num: number): string {
   return num.toString().padStart(2, '0');
@@ -24,9 +24,10 @@ function formatTimestamp(ms: number): string {
   return `${formatTimeComponent(time.hours)}:${formatTimeComponent(time.minutes)}:${formatTimeComponent(time.seconds)},${formatMilliseconds(time.milliseconds)}`;
 }
 
-export function generateSRT(cues: SubtitleCue[]): string {
+export function generateSRT(subtitles: ParsedSubtitles | SubtitleCue[]): string {
+  const cues = Array.isArray(subtitles) ? subtitles : subtitles.cues;
   return cues
-    .map((cue, index) => {
+    .map((cue: SubtitleCue, index: number) => {
       const number = index + 1;
       const timestamp = `${formatTimestamp(cue.startTime)} --> ${formatTimestamp(cue.endTime)}`;
       return `${number}\n${timestamp}\n${cue.text}`;

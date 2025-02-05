@@ -98,8 +98,14 @@ Parse SRT subtitle content.
 #### `parseVTT(content: string): ParsedVTT`
 Parse WebVTT subtitle content with support for styles, regions, and voice spans.
 
-#### `generateSRT(cues: SubtitleCue[]): string`
-Generate SRT content from subtitle cues.
+#### `generateSRT(input: ParsedSubtitles | SubtitleCue[]): string`
+Generate SRT content from either a ParsedSubtitles object or an array of subtitle cues.
+
+```typescript
+// Both forms are supported:
+const srtFromResult = generateSRT(result);        // Pass the full parsed result
+const srtFromCues = generateSRT(result.cues);     // Pass just the cues array
+```
 
 #### `generateVTT(subtitles: ParsedVTT): string`
 Generate WebVTT content with support for styles and regions.
