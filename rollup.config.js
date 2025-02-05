@@ -17,7 +17,8 @@ export default {
     {
       file: 'dist/subvibe.umd.js',
       format: 'umd',
-      name: 'SubVibe'
+      name: 'SubVibe',
+      globals: { debug: 'debug' }
     }
   ],
   plugins: [

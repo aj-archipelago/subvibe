@@ -1,6 +1,4 @@
 import { SubtitleCue, ParseError, ParsedSubtitles } from './types';
-import { parseVTT } from './vtt/parser';
-import { parseSRT } from './srt/parser';
 
 export interface TimeShiftOptions {
   offset: number;      // milliseconds to shift (positive or negative)
@@ -523,16 +521,20 @@ export class SubtitleUtils {
 
     // Check for WEBVTT header
     if (content.trim().startsWith('WEBVTT')) {
+      const { parseVTT } = require('./vtt/parser');
       return parseVTT(content);
     }
 
     // Check for SRT-style numeric index at start
     const firstLine = nonEmptyLines[0].trim();
     if (/^\d+$/.test(firstLine)) {
+      const { parseSRT } = require('./srt/parser');
       return parseSRT(content);
     }
 
     // If no clear indicators, try to parse as both formats and use the one with fewer errors
+    const { parseSRT } = require('./srt/parser');
+    const { parseVTT } = require('./vtt/parser');
     const srtResult = parseSRT(content);
     const vttResult = parseVTT(content);
 
