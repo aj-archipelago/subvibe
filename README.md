@@ -90,15 +90,19 @@ const cues: SubtitleCue[] = [
 ### Core Functions
 
 #### `parse(content: string): ParsedSubtitles`
+
 Auto-detect and parse subtitle content in either SRT or WebVTT format.
 
 #### `parseSRT(content: string): ParsedSubtitles`
+
 Parse SRT subtitle content.
 
 #### `parseVTT(content: string): ParsedVTT`
+
 Parse WebVTT subtitle content with support for styles, regions, and voice spans.
 
 #### `generateSRT(input: ParsedSubtitles | SubtitleCue[]): string`
+
 Generate SRT content from either a ParsedSubtitles object or an array of subtitle cues.
 
 ```typescript
@@ -108,6 +112,7 @@ const srtFromCues = generateSRT(result.cues);     // Pass just the cues array
 ```
 
 #### `generateVTT(subtitles: ParsedVTT): string`
+
 Generate WebVTT content with support for styles and regions.
 
 ### Types
@@ -247,4 +252,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-<p align="center">Built with 💖 by subtitle enthusiasts for subtitle enthusiasts.</p>
+<div align="center">Built with 💖 by subtitle enthusiasts for subtitle enthusiasts.</div>

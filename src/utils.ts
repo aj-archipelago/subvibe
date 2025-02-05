@@ -1,14 +1,5 @@
-import { SubtitleCue, ParseError, ParsedSubtitles } from './types';
-import { parseVTT } from './vtt/parser';
-import { parseSRT } from './srt/parser';
-import { ParserUtils } from './parserUtils';
-
-export interface TimeShiftOptions {
-  offset: number;      // milliseconds to shift (positive or negative)
-  startAt?: number;    // only shift cues after this time
-  endAt?: number;      // only shift cues before this time
-  preserveGaps?: boolean; // maintain relative gaps between subtitles
-}
+import { SubtitleCue, ParsedSubtitles, TimeShiftOptions, ParseError } from './types';
+import { detectFormat, parseTimeString, hasTimestamp, FormatDetectionResult } from './core-utils';
 
 export interface TimeScaleOptions {
   factor: number;      // scale factor (e.g., 1.1 for 10% slower, 0.9 for 10% faster)
@@ -43,22 +34,19 @@ export class SubtitleUtils {
     const { offset, startAt = 0, endAt = Infinity } = options;
     
     return cues.map(cue => {
-      const original = { startTime: cue.startTime, endTime: cue.endTime };
-      
       // Skip cues outside the time range
       if (cue.endTime < startAt || cue.startTime > endAt) {
         return { ...cue };
       }
 
-      // Calculate new times
-      const startTime = Math.max(0, cue.startTime + offset);
-      const endTime = Math.max(startTime + 1, cue.endTime + offset);
-
       return {
         ...cue,
-        startTime,
-        endTime,
-        original: cue.original || original
+        startTime: Math.max(0, cue.startTime + offset),
+        endTime: Math.max(1, cue.endTime + offset),
+        original: cue.original || {
+          startTime: cue.startTime,
+          endTime: cue.endTime
+        }
       };
     });
   }
@@ -493,11 +481,8 @@ export class SubtitleUtils {
    * Detect and parse subtitle content in either SRT or VTT format
    */
   static detectAndParse(content: string): ParsedSubtitles {
-    // Check for empty content first
-    const lines = content.trim().split(/\r?\n/);
-    const nonEmptyLines = lines.filter(line => line.trim());
-
-    if (nonEmptyLines.length === 0) {
+    // Early return for empty content
+    if (!content?.trim()) {
       return {
         type: 'unknown',
         cues: [],
@@ -509,8 +494,8 @@ export class SubtitleUtils {
       };
     }
 
-    // Check if content looks like a subtitle file
-    if (!ParserUtils.looksLikeSubtitle(content)) {
+    // Quick validation - must contain at least one timestamp-like pattern
+    if (!this.looksLikeSubtitle(content)) {
       return {
         type: 'unknown',
         cues: [],
@@ -522,24 +507,47 @@ export class SubtitleUtils {
       };
     }
 
-    // Check for WEBVTT header
-    if (content.trim().startsWith('WEBVTT')) {
-      return parseVTT(content);
+    try {
+      // Try both formats and choose the one with fewer errors
+      const srtResult = require('./srt/parser').parseSRT(content);
+      const vttResult = require('./vtt/parser').parseVTT(content);
+
+      const srtErrorCount = srtResult.errors?.length || 0;
+      const vttErrorCount = vttResult.errors?.length || 0;
+
+      // Only use results that successfully parsed some cues
+      if (srtResult.cues.length === 0 && vttResult.cues.length === 0) {
+        return {
+          type: 'unknown',
+          cues: [],
+          errors: [{
+            line: 1,
+            message: 'Failed to parse any valid subtitle cues',
+            severity: 'error'
+          }]
+        };
+      }
+
+      // Return the result with fewer errors and at least some valid cues
+      if (srtResult.cues.length > 0 && srtErrorCount <= vttErrorCount) {
+        return srtResult;
+      }
+      if (vttResult.cues.length > 0) {
+        return vttResult;
+      }
+
+      return srtResult; // Fallback to SRT if both have no cues
+
+    } catch (error) {
+      return {
+        type: 'unknown',
+        cues: [],
+        errors: [{
+          line: 1,
+          message: error instanceof Error ? error.message : 'Failed to parse subtitle content',
+          severity: 'error'
+        }]
+      };
     }
-
-    // Check for SRT-style numeric index at start
-    const firstLine = nonEmptyLines[0].trim();
-    if (/^\d+$/.test(firstLine)) {
-      return parseSRT(content);
-    }
-
-    // If no clear indicators, try to parse as both formats
-    const srtResult = parseSRT(content);
-    const vttResult = parseVTT(content);
-
-    const srtErrorCount = srtResult.errors?.length ?? 0;
-    const vttErrorCount = vttResult.errors?.length ?? 0;
-
-    return srtErrorCount <= vttErrorCount ? srtResult : vttResult;
   }
 }

@@ -1,5 +1,3 @@
-import { ParsedSubtitles, ParseError } from './types';
-
 export class ParserUtils {
   /**
    * Attempt to detect if text might be a subtitle block

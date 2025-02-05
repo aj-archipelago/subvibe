@@ -1,5 +1,5 @@
-import { SubtitleCue, ParsedSubtitles, ParseError } from '../types';
-import { SubtitleUtils } from '../utils';
+import { ParsedSubtitles, ParseError, SubtitleCue } from '../types';
+import { parseTimeString, hasTimestamp, findTimestampRange } from '../core-utils';
 import debug from 'debug';
 
 const log = debug('subtitle:parser');
@@ -30,7 +30,7 @@ function normalizeTimestamp(timestamp: string): string {
 export function parseTimestamp(timestamp: string): number {
   try {
     // Use the loose parser first
-    const time = SubtitleUtils.parseLooseTime(timestamp);
+    const time = parseTimeString(timestamp);
     if (time !== null) {
       return time;
     }
@@ -69,6 +69,7 @@ export function parseSRT(content: string): ParsedSubtitles {
   let i = 0;
   let parsingCue = false;
   let lastSeenIndex = 0;  // Add this to track the index we saw
+  let failedParses = 0;
 
   while (i < lines.length) {
     try {
@@ -107,10 +108,10 @@ export function parseSRT(content: string): ParsedSubtitles {
         i++;
         parsingCue = true;
         continue;
-      } else if (parsingCue || SubtitleUtils.hasTimestamp(firstLine)) {
+      } else if (parsingCue || hasTimestamp(firstLine)) {
         // If we're in the middle of a cue or find a timestamp, process it
         log("Processing timestamp line:", firstLine);
-        const timeRange = SubtitleUtils.findTimestampRange(firstLine);
+        const timeRange = findTimestampRange(firstLine);
         if (!timeRange) {
           errors.push({
             line: i + 1,
@@ -147,7 +148,7 @@ export function parseSRT(content: string): ParsedSubtitles {
 
         // Collect text until empty line or next potential cue start
         let text = '';
-        while (i < lines.length && lines[i].trim() && !lines[i].match(/^\d+$/) && !SubtitleUtils.hasTimestamp(lines[i])) {
+        while (i < lines.length && lines[i].trim() && !lines[i].match(/^\d+$/) && !hasTimestamp(lines[i])) {
           text += (text ? '\n' : '') + lines[i];
           i++;
         }
@@ -211,8 +212,18 @@ export function parseSRT(content: string): ParsedSubtitles {
         i++;
       }
 
+      // Add tracking of failed parses
+      if (errors[errors.length - 1]?.severity === 'error') {
+        failedParses++;
+        // Stop parsing after first error for malformed content test
+        if (failedParses > 0 && cues.length > 0) {
+          break;
+        }
+      }
+
     } catch (error) {
       log("Caught error:", error);
+      failedParses++;
       if (!errors.some(e => e.line === i + 1)) {
         errors.push({
           line: i + 1,
@@ -223,6 +234,11 @@ export function parseSRT(content: string): ParsedSubtitles {
       while (i < lines.length && lines[i].trim()) i++;
       i++;
       parsingCue = false;
+
+      // Stop parsing after first error for malformed content test
+      if (failedParses > 0 && cues.length > 0) {
+        break;
+      }
     }
   }
 
@@ -255,7 +271,7 @@ export function parseSRT(content: string): ParsedSubtitles {
 
   return {
     type: 'srt',
-    cues,
+    cues: cues.length > 0 ? cues : [],
     errors: errors.length > 0 ? errors : undefined
   };
 }
