@@ -1,7 +1,7 @@
 {
   "name": "@aj-archipelago/subvibe",
   "version": "1.0.0",
-  "main": "dist/subvibe.cjs.js",
+  "main": "./dist/subvibe.cjs.js",
   "scripts": {
     "test": "jest",
     "build": "rollup -c"
@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "type": "module",
   "devDependencies": {
     "@eslint/js": "^9.19.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
@@ -27,14 +28,14 @@
     "tslib": "^2.6.2",
     "@rollup/plugin-commonjs": "^25.0.0"
   },
-  "module": "dist/subvibe.esm.js",
+  "module": "./dist/subvibe.esm.js",
   "browser": "dist/subvibe.umd.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/subvibe.cjs.js",
       "import": "./dist/subvibe.esm.js",
-      "browser": "./dist/subvibe.umd.js"
+      "require": "./dist/subvibe.cjs.js",
+      "default": "./dist/subvibe.umd.js"
     }
   },
   "dependencies": {
