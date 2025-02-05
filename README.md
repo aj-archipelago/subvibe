@@ -127,6 +127,92 @@ interface ParsedVTT extends ParsedSubtitles {
 }
 ```
 
+### Advanced Utility Functions
+
+Subvibe provides a rich set of utility functions for advanced subtitle manipulation and processing:
+
+#### Time Manipulation
+
+```typescript
+// Shift subtitle timing
+const options: TimeShiftOptions = {
+  offset: 1000,      // milliseconds to shift (positive or negative)
+  startAt: 0,        // only shift cues after this time (optional)
+  endAt: Infinity,   // only shift cues before this time (optional)
+  preserveGaps: true // maintain relative gaps between subtitles (optional)
+};
+const shiftedCues = SubtitleUtils.shiftTime(cues, options);
+
+// Scale subtitle timing
+const options: TimeScaleOptions = {
+  factor: 1.1,     // scale factor (e.g., 1.1 for 10% slower)
+  anchor: 0,       // time point around which to scale (optional)
+  startAt: 0,      // only scale cues after this time (optional)
+  endAt: Infinity  // only scale cues before this time (optional)
+};
+const scaledCues = SubtitleUtils.scaleTime(cues, options);
+```
+
+#### Subtitle Processing
+
+```typescript
+// Merge overlapping subtitles
+const mergedCues = SubtitleUtils.mergeOverlapping(cues);
+
+// Fix common timing issues
+const fixedCues = SubtitleUtils.fixTimings(cues);
+
+// Remove formatting tags
+const strippedCues = SubtitleUtils.stripFormatting(cues);
+
+// Validate subtitles
+const validationResult = SubtitleUtils.validate(cues);
+console.log(validationResult.isValid);    // boolean
+console.log(validationResult.errors);     // array of errors
+
+// Normalize subtitles to strict format
+const options: NormalizeOptions = {
+  format: 'srt',              // 'srt' or 'vtt'
+  removeFormatting: false,    // remove styling tags
+  fixTimings: true,          // fix timing issues
+  mergeOverlapping: true,    // merge overlapping subtitles
+  minimumDuration: 500,      // minimum duration in ms
+  maximumDuration: 7000,     // maximum duration in ms
+  minimumGap: 40,           // minimum gap between subtitles in ms
+  removeEmpty: true,        // remove empty subtitles
+  cleanupSpacing: true      // clean up extra whitespace
+};
+const normalizedCues = SubtitleUtils.normalize(cues, options);
+```
+
+#### Format Detection and Parsing
+
+```typescript
+// Parse loose timestamp formats
+const ms = SubtitleUtils.parseLooseTime("1:23.456");    // 83456
+const ms = SubtitleUtils.parseLooseTime("1h 23m");      // 4980000
+const ms = SubtitleUtils.parseLooseTime("5m 35s");      // 335000
+
+// Check if text contains timestamp
+const hasTime = SubtitleUtils.hasTimestamp("at 1:23.456");  // true
+
+// Find timestamp range in text
+const range = SubtitleUtils.findTimestampRange("1:23 --> 4:56");
+console.log(range?.start);  // milliseconds
+console.log(range?.end);    // milliseconds
+
+// Check if text looks like subtitle content
+const isSubtitle = SubtitleUtils.looksLikeSubtitle(content);
+
+// Auto-detect and parse subtitle format
+const result = SubtitleUtils.detectAndParse(content);
+console.log(result.type);     // 'srt', 'vtt', or 'unknown'
+console.log(result.cues);     // parsed subtitle cues
+console.log(result.errors);   // parsing errors if any
+```
+
+These utility functions make it easy to perform common subtitle manipulation tasks while maintaining proper timing and format consistency. They're particularly useful when working with subtitles from different sources or when you need to adjust timing for different playback speeds.
+
 ## 💡 Why Subvibe?
 
 - 🎯 **Smart Format Detection**: Automatically handles SRT and WebVTT formats
