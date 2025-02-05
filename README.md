@@ -61,7 +61,7 @@ const result = parse(content);
 const vttContent = generateVTT(result);
 
 // Convert to SRT
-const srtContent = generateSRT(result.cues);
+const srtContent = generateSRT(result);
 ```
 
 ### Working with Subtitles Programmatically
