@@ -30,6 +30,13 @@
   "module": "dist/subvibe.esm.js",
   "browser": "dist/subvibe.umd.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/subvibe.cjs.js",
+      "import": "./dist/subvibe.esm.js",
+      "browser": "./dist/subvibe.umd.js"
+    }
+  },
   "dependencies": {
     "debug": "^4.3.4"
   }

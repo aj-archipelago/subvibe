@@ -6,9 +6,6 @@ import { SubtitleUtils } from './utils';
 import { ParsedSubtitles, SubtitleCue, TimeShiftOptions } from './types';
 import { detectFormat } from './core-utils';
 
-export { parseSRT, parseVTT, generateSRT, generateVTT, SubtitleUtils };
-export * from './types';
-
 /**
  * Parse subtitle content in either SRT or VTT format.
  * The format will be automatically detected based on the content.
@@ -27,7 +24,7 @@ export * from './types';
  * console.log(result.cues);  // array of parsed subtitle cues
  * ```
  */
-export function parse(content: string): ParsedSubtitles {
+function parse(content: string): ParsedSubtitles {
     const formatResult = detectFormat(content);
     
     switch (formatResult.type) {
@@ -59,6 +56,57 @@ export function parse(content: string): ParsedSubtitles {
  * const shiftedCues = resync(cues, { offset: 2000 });
  * ```
  */
-export function resync(cues: SubtitleCue[], options: TimeShiftOptions): SubtitleCue[] {
+function resync(cues: SubtitleCue[], options: TimeShiftOptions): SubtitleCue[] {
     return SubtitleUtils.shiftTime(cues, options);
 }
+
+/**
+ * Generate subtitle content in SRT, VTT, or plain text format.
+ * 
+ * @param cues - Array of subtitle cues to format
+ * @param format - Output format ('text', 'srt', or 'vtt'), defaults to 'text'
+ * @returns Formatted subtitle content as string
+ */
+function build(cues: SubtitleCue[], format: 'text' | 'srt' | 'vtt' = 'text'): string {
+    switch (format) {
+        case 'srt':
+            return generateSRT({ type: 'srt', cues });
+        case 'vtt':
+            return generateVTT({ type: 'vtt', cues });
+        case 'text':
+        default:
+            return cues
+                .map(cue => cue.text.trim())
+                .filter(Boolean)
+                .join('\n\n');
+    }
+}
+
+// Create the module object
+const SubVibe = {
+    parse,
+    resync,
+    build,
+    parseSRT,
+    parseVTT,
+    generateSRT,
+    generateVTT,
+    SubtitleUtils
+};
+
+// Export both named exports and default export
+export {
+    parse,
+    resync,
+    build,
+    parseSRT,
+    parseVTT,
+    generateSRT,
+    generateVTT,
+    SubtitleUtils
+};
+
+export default SubVibe;
+
+// Export types
+export type { ParsedSubtitles, SubtitleCue, TimeShiftOptions };

@@ -8,21 +8,28 @@ export default {
   output: [
     {
       file: 'dist/subvibe.cjs.js',
-      format: 'cjs'
+      format: 'cjs',
+      exports: 'named'
     },
     {
       file: 'dist/subvibe.esm.js',
-      format: 'es'
+      format: 'es',
+      exports: 'named'
     },
     {
       file: 'dist/subvibe.umd.js',
       format: 'umd',
       name: 'SubVibe',
-      globals: { debug: 'debug' }
+      globals: { debug: 'debug' },
+      exports: 'named'
     }
   ],
   plugins: [
-    typescript(),
+    typescript({
+      tsconfig: './tsconfig.json',
+      declaration: true,
+      declarationDir: 'dist'
+    }),
     nodeResolve(),
     commonjs(),
     terser()
