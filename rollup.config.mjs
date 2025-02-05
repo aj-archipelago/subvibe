@@ -10,22 +10,43 @@ export default {
       file: 'dist/subvibe.cjs.js',
       format: 'cjs',
       exports: 'named',
-      sourcemap: true
+      sourcemap: true,
+      interop: 'auto'
     },
     {
       file: 'dist/subvibe.esm.js',
       format: 'es',
       exports: 'named',
-      sourcemap: true
+      sourcemap: true,
+      interop: 'auto'
     },
     {
       file: 'dist/subvibe.umd.js',
       format: 'umd',
       name: 'SubVibe',
-      globals: { debug: 'debug' },
       exports: 'named',
-      sourcemap: true
+      sourcemap: true,
+      interop: 'auto',
+      globals: {
+        debug: 'debug'
+      }
     }
   ],
-  // ...existing code...
+  plugins: [
+    nodeResolve({
+      preferBuiltins: true,
+      browser: true
+    }),
+    commonjs({
+      include: /node_modules/,
+      transformMixedEsModules: true
+    }),
+    typescript({
+      tsconfig: './tsconfig.json',
+      declaration: true,
+      declarationDir: 'dist'
+    }),
+    terser()
+  ],
+  external: ['debug']
 };
