@@ -74,4 +74,23 @@ export interface ParsedVTT extends ParsedSubtitles {
   cues: VTTCue[];
   styles?: string[];
   regions?: VTTRegion[];
-} 
+}
+
+/**
+ * Options for shifting subtitle timestamps
+ */
+export interface TimeShiftOptions {
+  /**
+   * Time offset in milliseconds.
+   * Positive values shift forward, negative values shift backward.
+   */
+  offset: number;
+  /**
+   * Only shift cues after this time (optional)
+   */
+  startAt?: number;
+  /**
+   * Only shift cues before this time (optional)
+   */
+  endAt?: number;
+}

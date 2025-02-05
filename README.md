@@ -26,6 +26,19 @@ pnpm add subvibe
 
 ## 🚀 Quick Start
 
+### ESM Import and Usage
+
+```typescript
+import subvibe from '@aj-archipelago/subvibe';
+
+const content = `1
+00:00:01,000 --> 00:00:04,000
+Hello, world!`;
+
+const result = subvibe.parse(content);
+console.log(result.cues[0].text); // "Hello, world!"
+```
+
 ### Auto-detecting and Parsing Subtitles
 
 ```typescript
@@ -52,7 +65,7 @@ The `parse()` function will automatically detect whether your content is SRT or 
 ### Converting Between Formats
 
 ```typescript
-import { parse, generateVTT, generateSRT } from 'subvibe';
+import { parse, generateSRT, generateVTT, resync } from 'subvibe';
 
 // Parse any subtitle format
 const result = parse(content);
@@ -90,15 +103,39 @@ const cues: SubtitleCue[] = [
 ### Core Functions
 
 #### `parse(content: string): ParsedSubtitles`
+
 Auto-detect and parse subtitle content in either SRT or WebVTT format.
 
+```typescript
+const result = parse(content);
+console.log(result.type);    // 'srt' or 'vtt'
+console.log(result.cues);    // parsed subtitle cues
+```
+
+#### `resync(cues: SubtitleCue[], options: TimeShiftOptions): SubtitleCue[]`
+
+Shift subtitle timestamps by a specified offset.
+
+```typescript
+const options = {
+  offset: 1000,      // milliseconds to shift
+  startAt: 0,        // optional: start time
+  endAt: Infinity,   // optional: end time
+  preserveGaps: true // optional: maintain gaps
+};
+const shiftedCues = resync(cues, options);
+```
+
 #### `parseSRT(content: string): ParsedSubtitles`
+
 Parse SRT subtitle content.
 
 #### `parseVTT(content: string): ParsedVTT`
+
 Parse WebVTT subtitle content with support for styles, regions, and voice spans.
 
 #### `generateSRT(input: ParsedSubtitles | SubtitleCue[]): string`
+
 Generate SRT content from either a ParsedSubtitles object or an array of subtitle cues.
 
 ```typescript
@@ -108,6 +145,7 @@ const srtFromCues = generateSRT(result.cues);     // Pass just the cues array
 ```
 
 #### `generateVTT(subtitles: ParsedVTT): string`
+
 Generate WebVTT content with support for styles and regions.
 
 ### Types
@@ -247,4 +285,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-<p align="center">Built with 💖 by subtitle enthusiasts for subtitle enthusiasts.</p>
+<div align="center">Built with 💖 by subtitle enthusiasts for subtitle enthusiasts.</div>
