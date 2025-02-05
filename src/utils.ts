@@ -1,5 +1,6 @@
 import { SubtitleCue, ParsedSubtitles, TimeShiftOptions, ParseError } from './types';
-import { detectFormat, parseTimeString, hasTimestamp, FormatDetectionResult } from './core-utils';
+import { parseSRT } from './srt/parser';
+import { parseVTT } from './vtt/parser';
 
 export interface TimeScaleOptions {
   factor: number;      // scale factor (e.g., 1.1 for 10% slower, 0.9 for 10% faster)
@@ -509,8 +510,8 @@ export class SubtitleUtils {
 
     try {
       // Try both formats and choose the one with fewer errors
-      const srtResult = require('./srt/parser').parseSRT(content);
-      const vttResult = require('./vtt/parser').parseVTT(content);
+      const srtResult = parseSRT(content);
+      const vttResult = parseVTT(content);
 
       const srtErrorCount = srtResult.errors?.length || 0;
       const vttErrorCount = vttResult.errors?.length || 0;
