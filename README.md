@@ -15,13 +15,13 @@ The world's first fully vibe-coded subtitle utility library! Convert and manipul
 
 ```bash
 # Using npm
-npm install subvibe
+npm i @aj-archipelago/subvibe
 
 # Using yarn
-yarn add subvibe
+yarn add @aj-archipelago/subvibe
 
 # Using pnpm
-pnpm add subvibe
+pnpm add @aj-archipelago/subvibe
 ```
 
 ## 🚀 Quick Start
