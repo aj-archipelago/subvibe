@@ -1,7 +1,5 @@
 import { /* SubtitleCue, ParsedSubtitles, */ ParseError, ParsedVTT, VTTCue, VTTCueSettings, VTTRegion, /* VTTStyles, */ VTTVoice } from '../types';
-import debug from 'debug';
-
-const log = debug('subtitle:parser');
+import { parser as log } from '../utils/debug';
 
 function normalizeTimestamp(timestamp: string): string {
   // Remove any leading/trailing whitespace
