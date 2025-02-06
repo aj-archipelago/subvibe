@@ -2,24 +2,20 @@
   "name": "@aj-archipelago/subvibe",
   "version": "1.0.1",
   "main": "./dist/subvibe.cjs.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/aj-archipelago/subvibe.git"
-  },
   "scripts": {
     "test": "jest",
     "build": "rollup -c"
   },
   "keywords": [],
   "author": "",
-  "license": "MIT",
+  "license": "ISC",
   "description": "",
   "type": "module",
   "devDependencies": {
     "@eslint/js": "^9.19.0",
-    "@rollup/plugin-commonjs": "^25.0.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-typescript": "^12.1.2",
+    "@types/debug": "^4.1.12",
     "@types/jest": "^29.5.14",
     "eslint": "^9.19.0",
     "globals": "^15.14.0",
@@ -27,9 +23,10 @@
     "rollup": "^2.79.2",
     "rollup-plugin-terser": "^7.0.2",
     "ts-jest": "^29.2.5",
-    "tslib": "^2.6.2",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.23.0"
+    "typescript-eslint": "^8.23.0",
+    "tslib": "^2.6.2",
+    "@rollup/plugin-commonjs": "^25.0.0"
   },
   "module": "./dist/subvibe.esm.js",
   "browser": "./dist/subvibe.umd.js",
@@ -45,5 +42,8 @@
         "default": "./dist/subvibe.cjs.js"
       }
     }
+  },
+  "dependencies": {
+    "debug": "^4.3.4"
   }
 }

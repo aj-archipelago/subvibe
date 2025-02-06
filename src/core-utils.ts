@@ -61,14 +61,14 @@ export const parseTimeString = (timeStr: string): number => {
     }
     
     // Handle MM:SS,mmm or MM:SS.mmm format
-    if (timeStr.match(/^\d{1,2}:\d{2}[,.]\d{3}$/)) {
-        const [time, ms] = timeStr.split(/[,.]/);
+    if (timeStr.match(/^\d{1,2}:\d{2}[,\.]\d{3}$/)) {
+        const [time, ms] = timeStr.split(/[,\.]/);
         const [minutes, seconds] = time.split(':').map(Number);
         return (minutes * 60 + seconds) * 1000 + parseInt(ms);
     }
     
     // Handle HH:MM:SS,mmm format
-    const parts = timeStr.split(/[,.]/);
+    const parts = timeStr.split(/[,\.]/);
     const time = parts[0];
     const ms = parts[1] || '000';
     

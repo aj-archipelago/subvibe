@@ -1,6 +1,8 @@
 import { ParsedSubtitles, ParseError, SubtitleCue } from '../types';
 import { parseTimeString, hasTimestamp, findTimestampRange } from '../core-utils';
-import { parser as log } from '../utils/debug';
+import debug from 'debug';
+
+const log = debug('subtitle:parser');
 
 function normalizeTimestamp(timestamp: string): string {
   // Remove any leading/trailing whitespace

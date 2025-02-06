@@ -26,7 +26,10 @@ export default {
       name: 'SubVibe',
       exports: 'named',
       sourcemap: true,
-      interop: 'auto'
+      interop: 'auto',
+      globals: {
+        debug: 'debug'
+      }
     }
   ],
   plugins: [
@@ -44,5 +47,6 @@ export default {
       declarationDir: 'dist'
     }),
     terser()
-  ]
+  ],
+  external: ['debug']
 };

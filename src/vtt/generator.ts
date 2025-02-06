@@ -1,4 +1,7 @@
 import { ParsedVTT, VTTCue, SubtitleCue } from '../types';
+import debug from 'debug';
+
+const log = debug('subtitle:generator');
 
 function formatVTTTimestamp(ms: number): string {
   const hours = Math.floor(ms / 3600000);
