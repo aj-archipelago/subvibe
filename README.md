@@ -65,7 +65,7 @@ The `parse()` function will automatically detect whether your content is SRT or 
 ### Converting Between Formats
 
 ```typescript
-import { parse, generateSRT, generateVTT, resync } from 'subvibe';
+import { parse, generateSRT, generateVTT, resync, build } from 'subvibe';
 
 // Parse any subtitle format
 const result = parse(content);
@@ -75,6 +75,11 @@ const vttContent = generateVTT(result);
 
 // Convert to SRT
 const srtContent = generateSRT(result);
+
+// Build subtitles in any format from cues
+const textContent = build(result.cues);                 // Plain text
+const srtContent = build(result.cues, 'srt');          // SRT format
+const vttContent = build(result.cues, 'vtt');          // VTT format
 ```
 
 ### Working with Subtitles Programmatically
@@ -110,6 +115,21 @@ Auto-detect and parse subtitle content in either SRT or WebVTT format.
 const result = parse(content);
 console.log(result.type);    // 'srt' or 'vtt'
 console.log(result.cues);    // parsed subtitle cues
+```
+
+#### `build(cues: SubtitleCue[], format?: 'text' | 'srt' | 'vtt'): string`
+
+Generate subtitle content in various formats from an array of cues. The default format is 'text'.
+
+```typescript
+// Generate plain text (default)
+const textContent = build(cues);
+
+// Generate SRT format
+const srtContent = build(cues, 'srt');
+
+// Generate VTT format
+const vttContent = build(cues, 'vtt');
 ```
 
 #### `resync(cues: SubtitleCue[], options: TimeShiftOptions): SubtitleCue[]`
