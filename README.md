@@ -232,10 +232,12 @@ const normalizedCues = SubtitleUtils.normalize(cues, options);
 #### Format Detection and Parsing
 
 ```typescript
-// Parse loose timestamp formats
-const ms = SubtitleUtils.parseLooseTime("1:23.456");    // 83456
-const ms = SubtitleUtils.parseLooseTime("1h 23m");      // 4980000
-const ms = SubtitleUtils.parseLooseTime("5m 35s");      // 335000
+// Parse various timestamp formats
+const ms = SubtitleUtils.parseLooseTime("1:23.456");     // 83456
+const ms = SubtitleUtils.parseLooseTime("1h 23m");       // 4980000
+const ms = SubtitleUtils.parseLooseTime("5m 35s");       // 335000
+const ms = SubtitleUtils.parseLooseTime("23.456");       // 23456
+const ms = SubtitleUtils.parseLooseTime("1:23,456");     // 83456
 
 // Check if text contains timestamp
 const hasTime = SubtitleUtils.hasTimestamp("at 1:23.456");  // true
@@ -259,9 +261,10 @@ These utility functions make it easy to perform common subtitle manipulation tas
 
 ## 💡 Why Subvibe?
 
-- 🎯 **Smart Format Detection**: Automatically handles SRT and WebVTT formats
+- 🎯 **Smart Format Detection**: Automatically handles SRT and WebVTT formats with flexible timestamp parsing
 - 🛡️ **Type Safety**: Built with TypeScript for robust, error-free subtitle manipulation
 - 🚀 **Zero Dependencies**: Lightweight and efficient, only the code you need
+- 🧩 **Flexible Parsing**: Supports multiple timestamp formats including ultra-short (SS.mmm) and short (MM:SS,mmm) formats
 - 🧪 **Well Tested**: Comprehensive test suite ensures reliability
 - 📦 **Modern Package**: Built for modern JavaScript/TypeScript applications
 - 🎨 **Clean API**: Intuitive and easy-to-use interface
