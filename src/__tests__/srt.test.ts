@@ -403,4 +403,57 @@ Line with\u200Djoining char`;
     expect(result.cues[1].text).toBe('Text with\u2060word joiner\nLine with\u200Djoining char');
     expect(result.errors).toBeUndefined();
   });
+});
+
+describe('SRT Parser Timestamp Formats', () => {
+  test('handles short timestamp formats (MM:SS,mmm)', () => {
+    const input = `1
+01:30,000 --> 02:45,500
+Short timestamp format`;
+
+    const result = parseSRT(input);
+    expect(result.cues).toHaveLength(1);
+    expect(result.cues[0].startTime).toBe(90000); // 1:30 in milliseconds
+    expect(result.cues[0].endTime).toBe(165500); // 2:45.5 in milliseconds
+    expect(result.errors).toBeUndefined();
+  });
+
+  test('handles ultra-short timestamp formats (SS.mmm)', () => {
+    const input = `1
+03.298 --> 04.578
+First line
+
+2
+04.578 --> 06.178
+Second line`;
+
+    const result = parseSRT(input);
+    expect(result.cues).toHaveLength(2);
+    expect(result.cues[0].startTime).toBe(3298);
+    expect(result.cues[0].endTime).toBe(4578);
+    expect(result.cues[1].startTime).toBe(4578);
+    expect(result.cues[1].endTime).toBe(6178);
+    expect(result.errors).toBeUndefined();
+  });
+
+  test('handles mixed timestamp formats in the same file', () => {
+    const input = `1
+03.298 --> 04.578
+First line
+
+2
+00:04.578 --> 00:06.178
+Second line
+
+3
+00:00:06.178 --> 00:00:07.518
+Third line`;
+
+    const result = parseSRT(input);
+    expect(result.cues).toHaveLength(3);
+    expect(result.cues[0].startTime).toBe(3298);
+    expect(result.cues[1].startTime).toBe(4578);
+    expect(result.cues[2].startTime).toBe(6178);
+    expect(result.errors).toBeUndefined();
+  });
 }); 
