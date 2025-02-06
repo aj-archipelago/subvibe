@@ -9,15 +9,13 @@ function formatVTTTimestamp(ms: number): string {
   const seconds = Math.floor((ms % 60000) / 1000);
   const milliseconds = ms % 1000;
 
-  // For timestamps less than 1 hour, treat seconds as minutes
+  // Format as mm:ss.ttt if less than 1 hour
   if (hours === 0) {
-    return `${seconds}:${String(0).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
   }
   
-  // For timestamps >= 1 hour, use HH:MM:SS.mmm format
-  const formatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
-  log('Formatted with hours:', formatted);
-  return formatted;
+  // Format as hh:mm:ss.ttt if 1 hour or more
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
 }
 
 function formatCueSettings(cue: VTTCue): string {
@@ -44,19 +42,42 @@ function formatVoices(cue: VTTCue): string {
   ).join('\n');
 }
 
-export function generateVTT(vtt: ParsedVTT): string {
+export function generateVTT(subtitles: ParsedVTT | SubtitleCue[]): string {
   const blocks: string[] = ['WEBVTT'];
+  
+  // Handle array of SubtitleCue
+  if (Array.isArray(subtitles)) {
+    const cues = convertSRTCuesToVTT(subtitles);
+    cues.forEach(cue => {
+      const cueLines: string[] = [''];
+      
+      // Add identifier if present
+      if (cue.identifier) {
+        cueLines.push(cue.identifier);
+      }
 
-  // Add style blocks if present
-  if (vtt.styles && vtt.styles.length > 0) {
-    vtt.styles.forEach(style => {
+      // Add timestamp line
+      const timestamp = `${formatVTTTimestamp(cue.startTime)} --> ${formatVTTTimestamp(cue.endTime)}`;
+      cueLines.push(timestamp);
+
+      // Add text content
+      cueLines.push(cue.text);
+
+      blocks.push(cueLines.join('\n'));
+    });
+
+    return blocks.join('\n') + '\n';
+  }
+
+  // Handle ParsedVTT
+  if (subtitles.styles && subtitles.styles.length > 0) {
+    subtitles.styles.forEach(style => {
       blocks.push('', 'STYLE', style);
     });
   }
 
-  // Add region blocks if present
-  if (vtt.regions && vtt.regions.length > 0) {
-    vtt.regions.forEach(region => {
+  if (subtitles.regions && subtitles.regions.length > 0) {
+    subtitles.regions.forEach(region => {
       const regionLines = ['', 'REGION', `id=${region.id}`];
       if (region.width) regionLines.push(`width=${region.width}`);
       if (region.lines) regionLines.push(`lines=${region.lines}`);
@@ -67,8 +88,7 @@ export function generateVTT(vtt: ParsedVTT): string {
     });
   }
 
-  // Add cues
-  vtt.cues.forEach(cue => {
+  subtitles.cues.forEach(cue => {
     const cueLines: string[] = [''];
 
     // Add identifier if present

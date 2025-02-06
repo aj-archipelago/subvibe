@@ -1,5 +1,4 @@
-import { generateSRT } from '../srt/generator';
-import { parse, resync, SubtitleCue } from '../index';
+import { generateSRT, generateVTT, parse, resync, SubtitleCue } from '../index';
 
     // Sample subtitle cues for three different tracks
     const subtitles = [
@@ -40,5 +39,31 @@ describe('Merge and Offset Tests', () => {
     //check "Get out of here" is at the end of the output and timestamp is shifted, should be +24 mins
     expect(srtOutput).toContain("00:24:45,000 --> 00:24:46,000\nGet out of here.");
 
+  });
+
+  it('should merge three texts with different time offsets correctly to VTT', () => {
+    const results: SubtitleCue[] = []
+    for(let i = 0; i < subtitles.length; i++) {
+      const subtitle = subtitles[i];
+      const offset = offsets[i] * 1000;
+      const parsed = parse(subtitle);
+      const resynced = resync(parsed.cues, { offset });
+      results.push(...resynced);
+    }
+
+    const vttOutput = generateVTT(results.flat());
+
+    // Verify the output
+    //check "Ladies and gentlemen" is in the output and timestamp is not shifted
+    expect(vttOutput).toContain("00:00.000 --> 00:06.960\nLadies and gentlemen");
+
+    //check "I'm from future" is in the output and timestamp is shifted, should be +16 mins
+    expect(vttOutput).toContain("16:24.779 --> 16:32.380\nI'm from future 8");
+    
+    //check "Get out of here" is at the end of the output and timestamp is shifted, should be +24 mins
+    expect(vttOutput).toContain("24:45.000 --> 24:46.000\nGet out of here.");
+
+    // Verify VTT header
+    expect(vttOutput.startsWith('WEBVTT\n\n')).toBe(true);
   });
 });
