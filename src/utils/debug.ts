@@ -1,12 +1,14 @@
-import debug from 'debug';
-
-// Enable all logs in development/test environment
-if (process.env.NODE_ENV !== 'production') {
-  debug.enable('subtitle:*');
-}
+// Simple internal logger that gets stripped in production builds
+const createLogger = (namespace: string) => {
+  return (...args: unknown[]) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[${namespace}]`, ...args);
+    }
+  };
+};
 
 // Export individual loggers
-export const vtt = debug('subtitle:vtt');
-export const parser = debug('subtitle:parser');
-export const generator = debug('subtitle:generator');
-export const test = debug('subtitle:test'); 
+export const vtt = createLogger('subtitle:vtt');
+export const parser = createLogger('subtitle:parser');
+export const generator = createLogger('subtitle:generator');
+export const test = createLogger('subtitle:test'); 
