@@ -1,6 +1,6 @@
 import { parseSRT } from './srt/parser';
 import { parseVTT } from './vtt/parser';
-import { generateSRT } from './srt/generator';
+import { generateSRT, formatTimestamp } from './srt/generator';
 import { generateVTT } from './vtt/generator';
 import { SubtitleUtils } from './utils';
 import { ParsedSubtitles, SubtitleCue, TimeShiftOptions } from './types';
@@ -91,7 +91,8 @@ const SubVibe = {
     parseVTT,
     generateSRT,
     generateVTT,
-    SubtitleUtils
+    SubtitleUtils,
+    formatTimestamp
 };
 
 // Export both named exports and default export
@@ -103,7 +104,8 @@ export {
     parseVTT,
     generateSRT,
     generateVTT,
-    SubtitleUtils
+    SubtitleUtils,
+    formatTimestamp
 };
 
 export default SubVibe;

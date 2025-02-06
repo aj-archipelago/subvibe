@@ -269,9 +269,9 @@ describe('VTT Generator', () => {
     const output = generateVTT(vtt);
     expect(output).toBe(
       'WEBVTT\n\n' +
-      '1:00.000 --> 4:00.000\n' +
+      '00:01.000 --> 00:04.000\n' +
       'Hello world!\n\n' +
-      '5:00.000 --> 8:00.000\n' +
+      '00:05.000 --> 00:08.000\n' +
       'Second subtitle\n'
     );
   });
@@ -374,22 +374,22 @@ describe('VTT Generator', () => {
       cues: [
         {
           index: 1,
-          startTime: 1000,
-          endTime: 4000,
+          startTime: 1000,  // 1 second
+          endTime: 4000,    // 4 seconds
           text: 'No hours'
         },
         {
           index: 2,
-          startTime: 3600000,
-          endTime: 3605000,
+          startTime: 3600000,  // 1 hour
+          endTime: 3605000,    // 1 hour and 5 seconds
           text: 'With hours'
         }
       ]
     };
 
     const output = generateVTT(vtt);
-    expect(output).toContain('1:00.000 --> 4:00.000');
-    expect(output).toContain('01:00:00.000 --> 01:00:05.000');
+    expect(output).toContain('00:01.000 --> 00:04.000'); // mm:ss.ttt format
+    expect(output).toContain('01:00:00.000 --> 01:00:05.000'); // hh:mm:ss.ttt format
   });
 
   test('handles custom identifiers', () => {
@@ -405,7 +405,7 @@ describe('VTT Generator', () => {
     };
 
     const output = generateVTT(vtt);
-    expect(output).toContain('intro\n1:00.000');
+    expect(output).toContain('intro\n00:01.000');
   });
 });
 
@@ -466,4 +466,4 @@ Third line`;
     expect(result.cues[2].startTime).toBe(6178);
     expect(result.errors).toBeUndefined();
   });
-}); 
+});

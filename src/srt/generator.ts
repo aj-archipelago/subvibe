@@ -19,7 +19,7 @@ function millisecondsToTimeComponents(ms: number): TimeComponents {
   return { hours, minutes, seconds, milliseconds };
 }
 
-function formatTimestamp(ms: number): string {
+export function formatTimestamp(ms: number): string {
   const time = millisecondsToTimeComponents(ms);
   return `${formatTimeComponent(time.hours)}:${formatTimeComponent(time.minutes)}:${formatTimeComponent(time.seconds)},${formatMilliseconds(time.milliseconds)}`;
 }
