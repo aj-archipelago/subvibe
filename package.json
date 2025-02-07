@@ -1,6 +1,6 @@
 {
   "name": "@aj-archipelago/subvibe",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "./dist/index.cjs.js",
   "repository": {
     "type": "git",
@@ -13,7 +13,15 @@
     "dev": "tsup --watch",
     "coverage": "jest --coverage"
   },
-  "keywords": ["subtitles", "srt", "webvtt", "vtt", "subtitle-parser", "subtitle-converter", "typescript"],
+  "keywords": [
+    "subtitles",
+    "srt",
+    "webvtt",
+    "vtt",
+    "subtitle-parser",
+    "subtitle-converter",
+    "typescript"
+  ],
   "author": {
     "name": "AJ Archipelago",
     "url": "https://github.com/aj-archipelago"
