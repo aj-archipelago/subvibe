@@ -1,6 +1,19 @@
 import { parseSRT } from '../srt/parser';
 import { generateSRT, convertVTTCuesToSRT } from '../srt/generator';
 import { SubtitleCue } from '../types';
+import { parse } from '../index';
+
+
+const srtStr = "1\n00:03,560 --> 00:04,720\nstarted to\n2\n00:11,224 --> 00:14,984\nTheir.\n3\n00:15,434 --> 00:20,734\nWe, we.\n4\n00:21,394 --> 00:24,384\nNo matter how?\n5\n00:24,974 --> 00:27,944\nWe're getting back.\n6\n00:28,394 --> 00:33,394\nbut they.\n7\n00:34,194 --> 00:35,734…7:22,759\nوبعدين نرجع بكره عادي نشوف الدنيا.\n105\n07:34,011 --> 07:35,111\nWhere are we now?\n106\n07:35,361 --> 07:35,931\ H.\n107\n07:37,251 --> 07:38,711\nTell them about my promise to you.\n108\n07:38,711 --> 07:39,131\nOkay.\n109\n07:39,671 --> 07:43,361\nWhen.\n110\n07:43,801 --> 07:45,521\nAnd now, where are we?\n111\n07:45,771 --> 07:46,941\nIn.\n112\n07:46,941 --> 07:48,391\nThat was 2024.";
+
+
+describe('SRT Parser Mix Text', () => {
+  test('parses mix text', () => {
+    const result = parse(srtStr);
+    expect(result.type).toBe('srt');
+    expect(result.cues).toHaveLength(14);
+  });
+});
 
 describe('SRT Parser', () => {
   test('parses valid SRT content', () => {
@@ -162,6 +175,24 @@ Second`;
     expect(result.cues[1].index).toBe(2);
     expect(result.errors).toBeDefined();
     expect(result.errors![0].severity).toBe('warning');
+  });
+
+  test('handles special text formats and entities', () => {
+    const input = `1
+00:00:01,000 --> 00:00:04,000
+Don't forget & remember
+<i>This is italic</i>
+
+2
+00:00:04,500 --> 00:00:06,000
+Text with &quot;quotes&quot;
+Line with &amp; symbol`;
+    
+    const result = parseSRT(input);
+    expect(result.cues).toHaveLength(2);
+    expect(result.cues[0].text).toBe("Don't forget & remember\n<i>This is italic</i>");
+    expect(result.cues[1].text).toBe('Text with &quot;quotes&quot;\nLine with &amp; symbol');
+    expect(result.errors).toBeUndefined();
   });
 });
 
@@ -456,4 +487,4 @@ Third line`;
     expect(result.cues[2].startTime).toBe(6178);
     expect(result.errors).toBeUndefined();
   });
-}); 
+});
