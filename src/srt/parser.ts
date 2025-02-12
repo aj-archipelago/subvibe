@@ -1,4 +1,4 @@
-import { ParsedSubtitles, ParseError, SubtitleCue } from '../types';
+import { ParsedSubtitles, ParseError, SubtitleCue, ParseOptions } from '../types';
 import { parseTimeString, hasTimestamp, findTimestampRange } from '../core-utils';
 import { parser as log } from '../utils/debug';
 
@@ -56,7 +56,7 @@ export function parseTimestamp(timestamp: string): number {
   }
 }
 
-export function parseSRT(content: string): ParsedSubtitles {
+export function parseSRT(content: string, options: ParseOptions = {}): ParsedSubtitles {
   const lines = content.trim().split(/\r?\n/);
   log("\n=== Starting new parse ===");
   log("Input lines:", lines);
@@ -173,12 +173,13 @@ export function parseSRT(content: string): ParsedSubtitles {
         }
 
         currentIndex++;
-        cues.push({
-          index: currentIndex,
+        const cue = {
+          index: options.preserveIndexes ? lastSeenIndex : currentIndex,
           startTime,
           endTime,
           text
-        });
+        };
+        cues.push(cue);
 
         if (!parsingCue) {
           errors.push({

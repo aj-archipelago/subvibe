@@ -1,4 +1,4 @@
-import { /* SubtitleCue, ParsedSubtitles, */ ParseError, ParsedVTT, VTTCue, VTTCueSettings, VTTRegion, /* VTTStyles, */ VTTVoice } from '../types';
+import { /* SubtitleCue, ParsedSubtitles, */ ParseError, ParsedVTT, VTTCue, VTTCueSettings, VTTRegion, /* VTTStyles, */ VTTVoice, ParseOptions } from '../types';
 import { parser as log } from '../utils/debug';
 
 function normalizeTimestamp(timestamp: string): string {
@@ -195,7 +195,12 @@ function parseVoiceSpans(text: string): { voice: string; text: string }[] | unde
   }));
 }
 
-export function parseVTT(content: string): ParsedVTT {
+function parseCueIndex(line: string): number | null {
+  const num = parseInt(line, 10);
+  return !isNaN(num) ? num : null;
+}
+
+export function parseVTT(content: string, options: ParseOptions = {}): ParsedVTT {
   const lines = content.trim().split(/\r?\n/);
   const cues: VTTCue[] = [];
   const errors: ParseError[] = [];
@@ -365,9 +370,9 @@ export function parseVTT(content: string): ParsedVTT {
       // Parse voices and clean text
       const { text: cleanText, voices } = parseVTTVoices(text.trim());
 
-      // Create cue with only defined fields
+      // Create cue with properly handled index
       const cue: VTTCue = {
-        index: currentIndex + 1,
+        index: options.preserveIndexes ? (parseCueIndex(identifier) || currentIndex + 1) : currentIndex + 1,
         startTime,
         endTime,
         text: cleanText

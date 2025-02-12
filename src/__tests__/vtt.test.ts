@@ -248,29 +248,21 @@ Just seconds`;
 
 describe('VTT Generator', () => {
   test('generates basic VTT content', () => {
-    const vtt: ParsedVTT = {
-      type: 'vtt',
+    const vtt = {
+      type: 'vtt' as const,
       cues: [
-        {
-          index: 1,
-          startTime: 1000,
-          endTime: 4000,
-          text: 'Hello world!'
-        },
-        {
-          index: 2,
-          startTime: 5000,
-          endTime: 8000,
-          text: 'Second subtitle'
-        }
+        { index: 1, startTime: 1000, endTime: 4000, text: 'Hello world!' },
+        { index: 2, startTime: 5000, endTime: 8000, text: 'Second subtitle' }
       ]
     };
 
     const output = generateVTT(vtt);
     expect(output).toBe(
       'WEBVTT\n\n' +
+      '1\n' +
       '00:01.000 --> 00:04.000\n' +
       'Hello world!\n\n' +
+      '2\n' +
       '00:05.000 --> 00:08.000\n' +
       'Second subtitle\n'
     );
@@ -393,8 +385,8 @@ describe('VTT Generator', () => {
   });
 
   test('handles custom identifiers', () => {
-    const vtt: ParsedVTT = {
-      type: 'vtt',
+    const vtt = {
+      type: 'vtt' as const,
       cues: [{
         index: 1,
         identifier: 'intro',
