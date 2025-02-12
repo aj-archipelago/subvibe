@@ -33,7 +33,7 @@ export const detectFormat = (content: string): FormatDetectionResult => {
     // Check for SRT format (numbered entries followed by timestamps)
     const lines = content.trim().split('\n');
     if (lines.length > 2 && /^\d+$/.test(lines[0].trim()) && 
-        /^\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}$/.test(lines[1].trim())) {
+        /^(?:\d{2}:)?\d{2}:\d{2},\d{3} --> (?:\d{2}:)?\d{2}:\d{2},\d{3}$/.test(lines[1].trim())) {
         return { type: 'srt' };
     }
 
