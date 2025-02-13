@@ -85,7 +85,11 @@ export function parseSRT(content: string, options: ParseOptions = {}): ParsedSub
       log("Processing potential index line:", firstLine);
       const potentialIndex = parseInt(firstLine, 10);
       
-      if (!isNaN(potentialIndex) && firstLine.match(/^\d+$/)) {  // Only treat pure numbers as indices
+      // Only treat as index if next line has a timestamp
+      if (!isNaN(potentialIndex) && 
+          firstLine.match(/^\d+$/) && 
+          i + 1 < lines.length && 
+          hasTimestamp(lines[i + 1])) {
         log("Found valid index:", potentialIndex);
         
         // Check for non-sequential index when we find a new index
@@ -144,9 +148,18 @@ export function parseSRT(content: string, options: ParseOptions = {}): ParsedSub
 
         i++; // Move past timestamp line
 
-        // Collect text until empty line or next potential cue start
+        // Collect text until empty line or next cue start
         let text = '';
-        while (i < lines.length && lines[i].trim() && !lines[i].match(/^\d+$/) && !hasTimestamp(lines[i])) {
+        while (i < lines.length && lines[i].trim()) {
+          // Check if this line starts a new cue (number followed by timestamp)
+          const isNewCue = lines[i].match(/^\d+$/) && 
+                          i + 1 < lines.length && 
+                          hasTimestamp(lines[i + 1]);
+          
+          if (isNewCue) {
+            break;
+          }
+          
           text += (text ? '\n' : '') + lines[i];
           i++;
         }

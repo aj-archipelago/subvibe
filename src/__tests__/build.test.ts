@@ -1,4 +1,7 @@
 import { build } from '../index';
+import { parse } from '../index';
+import fs from 'fs';
+import path from 'path';
 
 describe('build function', () => {
     const testCues = [
@@ -73,5 +76,42 @@ describe('build function', () => {
         const result = build(parsedInput, { format: 'srt' });
         expect(result).not.toContain('WEBVTT');
         expect(result).toMatch(/1\n00:00:01,000 --> 00:00:04,000\nFirst/);
+    });
+
+    test('should handle numeric text content correctly', () => {
+        const numericCues = [
+            { index: 378, startTime: 227220, endTime: 228220, text: 'حرب' },
+            { index: 379, startTime: 228220, endTime: 228620, text: '73' },
+            { index: 380, startTime: 228620, endTime: 229120, text: 'حصل' }
+        ];
+        
+        const result = build(numericCues, { format: 'srt', preserveIndexes: true });
+        expect(result).toMatch(/379\n00:03:48,220 --> 00:03:48,620\n73/);
+    });
+
+    test('should rebuild subtitle file with numeric content', () => {
+        const filePath = path.join(__dirname, 'fixtures', 'numeric-content.srt');
+        const original = fs.readFileSync(filePath, 'utf8');
+        const parsed = parse(original);
+        const rebuilt = build(parsed); // Using default sequential numbering
+        
+        // Normalize line endings and whitespace for comparison
+        const normalizeStr = (str: string) => str.replace(/\r\n/g, '\n').trim();
+        expect(normalizeStr(rebuilt)).toBe(normalizeStr(original));
+        
+        // Specific check for the numeric content
+        expect(parsed.cues[1].text).toBe('73');
+        expect(rebuilt).toContain('2\n00:03:48,220 --> 00:03:48,620\n73');
+    });
+
+    test('should rebuild sublong.srt identical to original', () => {
+        const filePath = path.join(__dirname, 'fixtures', 'sublong.srt');
+        const original = fs.readFileSync(filePath, 'utf8');
+        const parsed = parse(original);
+        const rebuilt = build(parsed);
+        
+        // Normalize line endings and whitespace for comparison
+        const normalizeStr = (str: string) => str.replace(/\r\n/g, '\n').trim();
+        expect(normalizeStr(rebuilt)).toBe(normalizeStr(original));
     });
 });
