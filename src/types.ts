@@ -94,3 +94,12 @@ export interface TimeShiftOptions {
    */
   endAt?: number;
 }
+
+export interface BuildOptions {
+  format?: 'text' | 'srt' | 'vtt';
+  preserveIndexes?: boolean;
+}
+
+export interface ParseOptions {
+  preserveIndexes?: boolean;
+}
