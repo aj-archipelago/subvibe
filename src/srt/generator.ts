@@ -24,15 +24,20 @@ export function formatTimestamp(ms: number): string {
   return `${formatTimeComponent(time.hours)}:${formatTimeComponent(time.minutes)}:${formatTimeComponent(time.seconds)},${formatMilliseconds(time.milliseconds)}`;
 }
 
-export function generateSRT(subtitles: ParsedSubtitles | SubtitleCue[]): string {
-  const cues = Array.isArray(subtitles) ? subtitles : subtitles.cues;
+export function generateSRT(input: ParsedSubtitles | SubtitleCue[], options: { preserveIndexes?: boolean } = {}): string {
+  const cues = Array.isArray(input) ? input : input.cues;
+  
   return cues
-    .map((cue: SubtitleCue, index: number) => {
-      const number = index + 1;
-      const timestamp = `${formatTimestamp(cue.startTime)} --> ${formatTimestamp(cue.endTime)}`;
-      return `${number}\n${timestamp}\n${cue.text}`;
+    .map((cue, index) => {
+      const sequenceNumber = options.preserveIndexes ? (cue.index || index + 1) : index + 1;
+      return [
+        sequenceNumber,
+        `${formatTimestamp(cue.startTime)} --> ${formatTimestamp(cue.endTime)}`,
+        cue.text,
+        ''
+      ].join('\n');
     })
-    .join('\n\n') + '\n';
+    .join('\n');
 }
 
 // Optional utility function to convert VTT cues to SRT format
