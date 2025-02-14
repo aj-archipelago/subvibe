@@ -1,6 +1,7 @@
 import { parseVTT } from '../vtt/parser';
 import { generateVTT } from '../vtt/generator';
-import { ParsedVTT } from '../types';
+import { ParsedVTT, VTTSubtitleCue } from '../types';
+import { build, parse } from '../index';
 
 describe('VTT Parser', () => {
   test('parses valid VTT content with header', () => {
@@ -28,6 +29,7 @@ Goodbye!`;
     
     expect(result.cues[0]).toEqual({
       index: 1,
+      identifier: '1',
       startTime: 1000,
       endTime: 4000,
       text: 'Hello world!'
@@ -457,5 +459,56 @@ Third line`;
     expect(result.cues[1].startTime).toBe(4578);
     expect(result.cues[2].startTime).toBe(6178);
     expect(result.errors).toBeUndefined();
+  });
+});
+
+
+describe('VTT Parser/Builder', () => {
+  const input = `WEBVTT
+
+1
+00:00.000 --> 00:07.000
+It's here to change the game.
+
+intro
+00:07.000 --> 00:11.360
+With the power of AI transforming the future.
+
+question
+00:11.360 --> 00:14.160
+The possibilities endless.
+
+00:14.160 --> 00:17.240
+It's not just about the generative AI itself.`;
+
+  it('should preserve identifiers when preserveIndexes is true', () => {
+    const parsed = parse(input, { preserveIndexes: true }) as ParsedVTT;
+    const rebuilt = build(parsed, { preserveIndexes: true });
+    
+    expect(rebuilt).toBe(input);
+    expect(parsed.type).toBe('vtt');
+    expect(parsed.cues).toHaveLength(4);
+    
+    const [cue1, cue2, cue3, cue4] = parsed.cues as VTTSubtitleCue[];
+    
+    expect(cue1.identifier).toBe('1');
+    expect(cue2.identifier).toBe('intro');
+    expect(cue3.identifier).toBe('question');
+    expect(cue4.identifier).toBeUndefined();
+  });
+
+  it('should override identifiers when preserveIndexes is false', () => {
+    const parsed = parse(input, { preserveIndexes: false }) as ParsedVTT;
+    const rebuilt = build(parsed, { preserveIndexes: false });
+    
+    expect(parsed.type).toBe('vtt');
+    expect(parsed.cues).toHaveLength(4);
+    
+    // The rebuilt content should not match the input due to renumbering
+    expect(rebuilt).not.toBe(input);
+    // Verify the first cue in rebuilt content
+    expect(rebuilt).toContain('1\n00:00.000 --> 00:07.000\nIt\'s here to change the game.');
+    // Verify the second cue has been renumbered
+    expect(rebuilt).toContain('2\n00:07.000 --> 00:11.360\nWith the power of AI transforming the future.');
   });
 });

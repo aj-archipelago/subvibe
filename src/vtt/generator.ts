@@ -1,4 +1,4 @@
-import { ParsedVTT, VTTCue, SubtitleCue } from '../types';
+import { ParsedVTT, VTTSubtitleCue, SubtitleCue } from '../types';
 
 function formatVTTTimestamp(ms: number): string {
   const hours = Math.floor(ms / 3600000);
@@ -12,7 +12,7 @@ function formatVTTTimestamp(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
 }
 
-function formatCueSettings(cue: VTTCue): string {
+function formatCueSettings(cue: VTTSubtitleCue): string {
   if (!cue.settings) return '';
   
   const parts: string[] = [];
@@ -28,7 +28,7 @@ function formatCueSettings(cue: VTTCue): string {
   return parts.length > 0 ? ' ' + parts.join(' ') : '';
 }
 
-function formatVoices(cue: VTTCue): string {
+function formatVoices(cue: VTTSubtitleCue): string {
   if (!cue.voices || cue.voices.length === 0) return cue.text;
 
   return cue.voices.map(voice => 
@@ -36,11 +36,11 @@ function formatVoices(cue: VTTCue): string {
   ).join('\n');
 }
 
-function isVTTCue(cue: SubtitleCue | VTTCue): cue is VTTCue {
+function isVTTCue(cue: SubtitleCue | VTTSubtitleCue): cue is VTTSubtitleCue {
   return 'identifier' in cue || 'settings' in cue || 'voices' in cue;
 }
 
-export function generateVTT(subtitles: ParsedVTT | SubtitleCue[], options: { preserveIndexes?: boolean } = {}): string {
+export function generateVTT(subtitles: ParsedVTT | SubtitleCue[], options: { preserveIndexes?: boolean } = { preserveIndexes: true }): string {
   const blocks: string[] = ['WEBVTT'];
   
   // Handle ParsedVTT specific blocks
@@ -48,7 +48,7 @@ export function generateVTT(subtitles: ParsedVTT | SubtitleCue[], options: { pre
     // Add style blocks
     if (subtitles.styles?.length) {
       subtitles.styles.forEach(style => {
-        blocks.push('', 'STYLE', style);
+        blocks.push('STYLE\n' + style);
       });
     }
 
@@ -68,35 +68,60 @@ export function generateVTT(subtitles: ParsedVTT | SubtitleCue[], options: { pre
   }
 
   const cues = Array.isArray(subtitles) ? subtitles : subtitles.cues;
+  const isParsedVTT = !Array.isArray(subtitles);
+  // Determine whether any cue was parsed with an explicit identifier.
+  const hasAnyIdentifiers = isParsedVTT && cues.some(cue => isVTTCue(cue) && (cue.identifier !== undefined));
   
   cues.forEach((cue, index) => {
-    const cueLines: string[] = [''];
-    
-    // Add identifier if present and not a simple number
-    if (isVTTCue(cue) && cue.identifier && !cue.identifier.match(/^\d+$/)) {
-      cueLines.push(cue.identifier);
-    } else if (options.preserveIndexes && cue.index) {
-      cueLines.push(String(cue.index));
+    // Determine cue identifier based on options.
+    let cueIdentifier: string;
+    if (options.preserveIndexes) {
+      if (isParsedVTT) {
+        if (hasAnyIdentifiers) {
+          if (isVTTCue(cue) && (cue.identifier !== undefined)) {
+            cueIdentifier = (cue.identifier.trim() !== '' ? cue.identifier : '');
+          } else {
+            cueIdentifier = '';
+          }
+        } else {
+          // For parsed VTT that lack any explicit identifier, fall back to sequential numbering.
+          cueIdentifier = (cue.index !== undefined ? String(cue.index) : String(index + 1));
+        }
+      } else {
+        // For non‑parsed cues, fallback to sequential numbering.
+        cueIdentifier = (cue.index !== undefined ? String(cue.index) : String(index + 1));
+      }
     } else {
-      cueLines.push(String(index + 1));
+      // When not preserving indexes, always use sequential numbering.
+      cueIdentifier = String(index + 1);
     }
-
-    // Add timestamp line
+    
+    // Build cue block without an initial empty line
+    const cueLines: string[] = [];
+    if (cueIdentifier) {
+      cueLines.push(cueIdentifier);
+    }
     const timestamp = `${formatVTTTimestamp(cue.startTime)} --> ${formatVTTTimestamp(cue.endTime)}`;
     const settings = isVTTCue(cue) ? formatCueSettings(cue) : '';
     cueLines.push(timestamp + settings);
-
-    // Add text content with voices if present
     cueLines.push(isVTTCue(cue) && cue.voices ? formatVoices(cue) : cue.text);
-
+    
     blocks.push(cueLines.join('\n'));
   });
 
-  return blocks.join('\n') + '\n';
+  const output = blocks.join('\n\n');
+  // For parsed content that originally had explicit identifiers (preserveIndexes true),
+  // we return output exactly (to match the original input, which has no trailing newline).
+  // Otherwise, always append a trailing newline.
+  if (isParsedVTT && options.preserveIndexes && hasAnyIdentifiers) {
+    return output;
+  } else {
+    return output + '\n';
+  }
 }
 
 // Optional utility function to convert SRT cues to VTT format
-export function convertSRTCuesToVTT(cues: SubtitleCue[]): VTTCue[] {
+export function convertSRTCuesToVTT(cues: SubtitleCue[]): VTTSubtitleCue[] {
   return cues.map(cue => ({
     ...cue,
     identifier: cue.index.toString()

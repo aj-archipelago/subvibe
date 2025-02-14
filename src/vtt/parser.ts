@@ -1,4 +1,4 @@
-import { /* SubtitleCue, ParsedSubtitles, */ ParseError, ParsedVTT, VTTCue, VTTCueSettings, VTTRegion, /* VTTStyles, */ VTTVoice, ParseOptions } from '../types';
+import { /* SubtitleCue, ParsedSubtitles, */ ParseError, ParsedVTT, VTTCueSettings, VTTRegion, /* VTTStyles, */ VTTVoice, ParseOptions, VTTSubtitleCue } from '../types';
 import { parser as log } from '../utils/debug';
 
 function normalizeTimestamp(timestamp: string): string {
@@ -200,9 +200,9 @@ function parseCueIndex(line: string): number | null {
   return !isNaN(num) ? num : null;
 }
 
-export function parseVTT(content: string, options: ParseOptions = {}): ParsedVTT {
+export function parseVTT(content: string, options: ParseOptions = { preserveIndexes: true }): ParsedVTT {
   const lines = content.trim().split(/\r?\n/);
-  const cues: VTTCue[] = [];
+  const cues: VTTSubtitleCue[] = [];
   const errors: ParseError[] = [];
   const styles: string[] = [];
   const regions: VTTRegion[] = [];
@@ -370,17 +370,24 @@ export function parseVTT(content: string, options: ParseOptions = {}): ParsedVTT
       // Parse voices and clean text
       const { text: cleanText, voices } = parseVTTVoices(text.trim());
 
-      // Create cue with properly handled index
-      const cue: VTTCue = {
-        index: options.preserveIndexes ? (parseCueIndex(identifier) || currentIndex + 1) : currentIndex + 1,
+      // Create cue with properly handled index and identifier
+      const cue: VTTSubtitleCue = {
+        index: currentIndex + 1,
         startTime,
         endTime,
         text: cleanText
       };
 
-      if (identifier && !identifier.match(/^\d+$/)) {  // Only store non-numeric identifiers
+      if (options.preserveIndexes && identifier) {
+        // When preserving indexes, store all identifiers
         cue.identifier = identifier;
+      } else if (!options.preserveIndexes) {
+        // When not preserving indexes, only store non-numeric identifiers
+        if (identifier && !identifier.match(/^\d+$/)) {
+          cue.identifier = identifier;
+        }
       }
+
       if (settings && Object.keys(settings).length > 0) {
         cue.settings = settings;
       }

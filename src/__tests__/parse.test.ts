@@ -25,7 +25,8 @@ describe('parse function', () => {
         expect(result.type).toBe('vtt');
         expect(result.cues).toHaveLength(3);
         expect(result.cues[1]).toEqual({
-            index: 35,
+            index: 2,
+            identifier: '35',
             startTime: 4500,
             endTime: 8000,
             text: 'Second subtitle with\nmultiple lines'
