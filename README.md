@@ -42,7 +42,7 @@ console.log(result.cues[0].text); // "Hello, world!"
 ### Auto-detecting and Parsing Subtitles
 
 ```typescript
-import { parse } from 'subvibe';
+import { parse } from '@aj-archipelago/subvibe';
 
 // Your subtitle content (either SRT or WebVTT)
 const content = `1
@@ -65,7 +65,7 @@ The `parse()` function will automatically detect whether your content is SRT or 
 ### Converting Between Formats
 
 ```typescript
-import { parse, generateSRT, generateVTT, resync, build } from 'subvibe';
+import { parse, generateSRT, generateVTT, resync, build } from '@aj-archipelago/subvibe';
 
 // Parse any subtitle format
 const result = parse(content);
@@ -85,7 +85,7 @@ const vttContent = build(result.cues, 'vtt');          // VTT format
 ### Working with Subtitles Programmatically
 
 ```typescript
-import { SubtitleCue } from 'subvibe';
+import { SubtitleCue } from '@aj-archipelago/subvibe';
 
 const cues: SubtitleCue[] = [
   {

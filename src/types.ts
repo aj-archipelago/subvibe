@@ -29,7 +29,7 @@ export interface TimeComponents {
   milliseconds: number;
 }
 
-export interface VTTCue extends SubtitleCue {
+export interface VTTSubtitleCue extends SubtitleCue {
   identifier?: string;
   settings?: VTTCueSettings;
   styles?: VTTStyles;
@@ -71,7 +71,7 @@ export interface VTTBlock {
 
 export interface ParsedVTT extends ParsedSubtitles {
   type: 'vtt';
-  cues: VTTCue[];
+  cues: VTTSubtitleCue[];
   styles?: string[];
   regions?: VTTRegion[];
 }
@@ -97,9 +97,9 @@ export interface TimeShiftOptions {
 
 export interface BuildOptions {
   format?: 'text' | 'srt' | 'vtt';
-  preserveIndexes?: boolean;
+  preserveIndexes?: boolean; // defaults to true
 }
 
 export interface ParseOptions {
-  preserveIndexes?: boolean;
+  preserveIndexes?: boolean; // defaults to true
 }
