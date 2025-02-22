@@ -479,7 +479,8 @@ question
 The possibilities endless.
 
 00:14.160 --> 00:17.240
-It's not just about the generative AI itself.`;
+It's not just about the generative AI itself.
+`;
 
   it('should preserve identifiers when preserveIndexes is true', () => {
     const parsed = parse(input, { preserveIndexes: true }) as ParsedVTT;

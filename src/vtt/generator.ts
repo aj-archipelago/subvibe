@@ -110,14 +110,7 @@ export function generateVTT(subtitles: ParsedVTT | SubtitleCue[], options: { pre
   });
 
   const output = blocks.join('\n\n');
-  // For parsed content that originally had explicit identifiers (preserveIndexes true),
-  // we return output exactly (to match the original input, which has no trailing newline).
-  // Otherwise, always append a trailing newline.
-  if (isParsedVTT && options.preserveIndexes && hasAnyIdentifiers) {
-    return output;
-  } else {
-    return output + '\n';
-  }
+  return output + '\n';
 }
 
 // Optional utility function to convert SRT cues to VTT format
