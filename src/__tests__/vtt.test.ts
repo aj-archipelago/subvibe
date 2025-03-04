@@ -2,6 +2,8 @@ import { parseVTT } from '../vtt/parser';
 import { generateVTT } from '../vtt/generator';
 import { ParsedVTT, VTTSubtitleCue } from '../types';
 import { build, parse } from '../index';
+import * as fs from 'fs';
+import * as path from 'path';
 
 describe('VTT Parser', () => {
   test('parses valid VTT content with header', () => {
@@ -511,5 +513,48 @@ It's not just about the generative AI itself.
     expect(rebuilt).toContain('1\n00:00.000 --> 00:07.000\nIt\'s here to change the game.');
     // Verify the second cue has been renumbered
     expect(rebuilt).toContain('2\n00:07.000 --> 00:11.360\nWith the power of AI transforming the future.');
+  });
+});
+
+describe('VTT Parser Edge Cases', () => {
+  test('parses VTT file with no empty lines', () => {
+    // Read the fixture file
+    const fixturePath = path.join(__dirname, 'fixtures', 'subnospacing.vtt');
+    const content = fs.readFileSync(fixturePath, 'utf-8');
+    
+    // Parse the content
+    const result = parseVTT(content);
+    
+    // Verify the basic structure
+    expect(result.type).toBe('vtt');
+    expect(result.errors).toBeUndefined();
+    expect(result.cues).toBeDefined();
+    expect(result.cues.length).toBeGreaterThan(0);
+    
+    // Check some specific cues to ensure they were parsed correctly
+    expect(result.cues[0]).toMatchObject({
+      index: 1,
+      identifier: '1',
+      startTime: 424,
+      endTime: 1464,
+      text: 'The end of programming'
+    });
+    
+    expect(result.cues[4]).toMatchObject({
+      index: 5,
+      identifier: '5',
+      startTime: 5844,
+      endTime: 10044,
+      text: 'I went and checked the length of this and if this is new, it is new.'
+    });
+    
+    // Check a cue with a longer timestamp
+    expect(result.cues[82]).toMatchObject({
+      index: 83,
+      identifier: '83',
+      startTime: 356024,
+      endTime: 357884,
+      text: 'Pretty fantastic.'
+    });
   });
 });
