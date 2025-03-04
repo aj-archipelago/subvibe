@@ -362,7 +362,33 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
       // Parse text content
       i++;
       let text = '';
-      while (i < lines.length && lines[i].trim() !== '') {
+      while (i < lines.length) {
+        const line = lines[i].trim();
+        
+        // Check if this line could be the start of a new cue
+        // It's a new cue if it's empty, a numeric identifier, or contains a timestamp
+        const isTimestampLine = line.includes('-->');
+        const isPotentialIdentifier = /^\d+$/.test(line);
+        const isEmptyLine = line === '';
+        
+        // If we encounter what looks like a new cue, stop collecting text
+        if (isEmptyLine || isPotentialIdentifier || isTimestampLine) {
+          break;
+        }
+        
+        // Check if the next line could be a timestamp line
+        // This helps with cases where a numeric identifier is immediately followed by a timestamp
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].trim();
+          if (nextLine.includes('-->')) {
+            // If current line is a potential identifier and next line is a timestamp,
+            // this is likely the start of a new cue
+            if (isPotentialIdentifier || /^\d+$/.test(line)) {
+              break;
+            }
+          }
+        }
+        
         text += (text ? '\n' : '') + lines[i];
         i++;
       }
