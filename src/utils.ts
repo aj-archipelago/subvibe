@@ -1,6 +1,7 @@
-import { SubtitleCue, ParsedSubtitles, TimeShiftOptions, ParseError } from './types';
+import { SubtitleCue, ParsedSubtitles, TimeShiftOptions, ParseError, VTTRegion, VTTSubtitleCue } from './types';
 import { parseSRT } from './srt/parser';
 import { parseVTT } from './vtt/parser';
+import { extractFromMarkdown } from './core-utils';
 
 export interface TimeScaleOptions {
   factor: number;      // scale factor (e.g., 1.1 for 10% slower, 0.9 for 10% faster)
@@ -479,11 +480,23 @@ export class SubtitleUtils {
   }
 
   /**
+   * Extracts subtitle content from markdown code blocks if present
+   * Supports both ```vtt and ```srt code block formats
+   */
+  static extractFromMarkdown(content: string): { content: string; wasExtracted: boolean } {
+    const { content: extractedContent, wasExtracted } = extractFromMarkdown(content);
+    return { content: extractedContent, wasExtracted };
+  }
+
+  /**
    * Detect and parse subtitle content in either SRT or VTT format
    */
   static detectAndParse(content: string): ParsedSubtitles {
+    // Check if content is wrapped in markdown code blocks and extract if needed
+    const { content: extractedContent, wasExtracted } = this.extractFromMarkdown(content);
+    
     // Early return for empty content
-    if (!content?.trim()) {
+    if (!extractedContent?.trim()) {
       return {
         type: 'unknown',
         cues: [],
@@ -496,7 +509,7 @@ export class SubtitleUtils {
     }
 
     // Quick validation - must contain at least one timestamp-like pattern
-    if (!this.looksLikeSubtitle(content)) {
+    if (!this.looksLikeSubtitle(extractedContent)) {
       return {
         type: 'unknown',
         cues: [],
@@ -510,8 +523,8 @@ export class SubtitleUtils {
 
     try {
       // Try both formats and choose the one with fewer errors
-      const srtResult = parseSRT(content);
-      const vttResult = parseVTT(content);
+      const srtResult = parseSRT(extractedContent);
+      const vttResult = parseVTT(extractedContent);
 
       const srtErrorCount = srtResult.errors?.length || 0;
       const vttErrorCount = vttResult.errors?.length || 0;

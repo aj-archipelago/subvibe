@@ -4,11 +4,12 @@ import { generateSRT, formatTimestamp } from './srt/generator';
 import { generateVTT } from './vtt/generator';
 import { SubtitleUtils } from './utils';
 import { ParsedSubtitles, SubtitleCue, TimeShiftOptions, BuildOptions, ParsedVTT, ParseOptions } from './types';
-import { detectFormat } from './core-utils';
+import { detectFormat, extractFromMarkdown } from './core-utils';
 
 /**
  * Parse subtitle content in either SRT or VTT format.
  * The format will be automatically detected based on the content.
+ * Also supports content embedded in markdown code blocks like ```vtt or ```srt.
  * 
  * @param content - The subtitle content to parse
  * @param options - Optional parsing options
@@ -28,11 +29,14 @@ import { detectFormat } from './core-utils';
 function parse(content: string, options: ParseOptions = {}): ParsedSubtitles {
     const formatResult = detectFormat(content);
     
+    // Extract content from markdown if needed
+    const { content: extractedContent } = extractFromMarkdown(content);
+    
     switch (formatResult.type) {
         case 'srt':
-            return parseSRT(content, options);
+            return parseSRT(extractedContent, options);
         case 'vtt':
-            return parseVTT(content, options);
+            return parseVTT(extractedContent, options);
         default:
             return {
                 type: 'unknown',
