@@ -128,6 +128,50 @@ Third line`;
             expect(result.cues).toHaveLength(5);
             expect(result.errors).toBeUndefined();
         });
+
+        test('detects VTT format embedded in markdown code block', () => {
+            const markdownVtt = `
+# Sample Subtitle
+
+Here is an example of VTT in a markdown code block:
+
+\`\`\`vtt
+WEBVTT
+
+00:00:01.916 --> 00:00:04.636
+It's here to change the game.
+
+00:00:06.296 --> 00:00:11.166
+With the power of AI, transforming the future.
+\`\`\`
+`;
+            const result = SubtitleUtils.detectAndParse(markdownVtt);
+            expect(result.type).toBe('vtt');
+            expect(result.cues).toHaveLength(2);
+            expect(result.errors).toBeUndefined();
+        });
+
+        test('detects SRT format embedded in markdown code block', () => {
+            const markdownSrt = `
+# Sample Subtitle
+
+Here is an example of SRT in a markdown code block:
+
+\`\`\`srt
+1
+00:00:01,916 --> 00:00:04,636
+It's here to change the game.
+
+2
+00:00:06,296 --> 00:00:11,166
+With the power of AI, transforming the future.
+\`\`\`
+`;
+            const result = SubtitleUtils.detectAndParse(markdownSrt);
+            expect(result.type).toBe('srt');
+            expect(result.cues).toHaveLength(2);
+            expect(result.errors).toBeUndefined();
+        });
     });
 
     describe('Format Conversion and Normalization', () => {

@@ -11,6 +11,26 @@ export interface FormatDetectionResult {
 }
 
 /**
+ * Extracts subtitle content from markdown code blocks if present
+ * Supports both ```vtt and ```srt code block formats
+ */
+export const extractFromMarkdown = (content: string): { content: string; wasExtracted: boolean; type?: 'srt' | 'vtt' } => {
+    // Check if content is wrapped in markdown code blocks
+    const vttMatch = content.match(/```vtt\s*\n([\s\S]*?)```/);
+    const srtMatch = content.match(/```srt\s*\n([\s\S]*?)```/);
+    
+    if (vttMatch && vttMatch[1]) {
+        return { content: vttMatch[1], wasExtracted: true, type: 'vtt' };
+    }
+    
+    if (srtMatch && srtMatch[1]) {
+        return { content: srtMatch[1], wasExtracted: true, type: 'srt' };
+    }
+    
+    return { content, wasExtracted: false };
+};
+
+/**
  * Detects the subtitle format from content
  */
 export const detectFormat = (content: string): FormatDetectionResult => {
@@ -25,13 +45,21 @@ export const detectFormat = (content: string): FormatDetectionResult => {
         };
     }
 
+    // Check if content is wrapped in markdown code blocks and extract if needed
+    const { content: extractedContent, wasExtracted, type: markdownType } = extractFromMarkdown(content);
+    
+    // If we detected the type from markdown, return it directly
+    if (wasExtracted && markdownType) {
+        return { type: markdownType };
+    }
+    
     // Check for VTT header
-    if (content.trim().startsWith('WEBVTT')) {
+    if (extractedContent.trim().startsWith('WEBVTT')) {
         return { type: 'vtt' };
     }
 
     // Check for SRT format (numbered entries followed by timestamps)
-    const lines = content.trim().split('\n');
+    const lines = extractedContent.trim().split('\n');
     if (lines.length > 2 && /^\d+$/.test(lines[0].trim()) && 
         /^(?:\d{2}:)?\d{2}:\d{2},\d{3} --> (?:\d{2}:)?\d{2}:\d{2},\d{3}$/.test(lines[1].trim())) {
         return { type: 'srt' };
