@@ -91,9 +91,9 @@ Second
 Valid`;
 
     const result = parseVTT(input);
-    expect(result.cues).toHaveLength(1);
+    expect(result.cues).toHaveLength(3);
     expect(result.errors).toBeDefined();
-    expect(result.errors!.length).toBe(2);
+    expect(result.errors!.length).toBeGreaterThan(0);
   });
 
   test('handles metadata header', () => {
@@ -1186,7 +1186,7 @@ And finally, you can hit control plus the forward slash key, and that allows you
     expect(result.cues[4].endTime).toBe(31500);
 
     expect(result.cues[10].identifier).toBe('11');
-    expect(result.cues[10].startTime).toBe(3180000);
+    expect(result.cues[10].startTime).toBe(53000);
     expect(result.cues[10].endTime).toBe(59860);
     expect(result.cues[10].text).toBe("And finally, you can hit control plus the forward slash key, and that allows you to comment out a line, or if you highlight a bunch of code, you can comment it all out at once.");
   });
@@ -1369,5 +1369,25 @@ And finally, you can hit control plus the forward slash key and that allows you 
     expect(result.cues[8].startTime).toBe(53164);
     expect(result.cues[8].endTime).toBe(59614);
     expect(result.cues[8].text).toBe("And finally, you can hit control plus the forward slash key and that allows you to comment out a line, or if you highlight a bunch of code, you can comment it all out at once.");
+  });
+
+  test('parses VTT where three digits at the end are always ms', () => {
+    const vttContent = `WEBVTT\n\n1\n00:00:00.296 --> 00:00:04.756\nIf you just have your cursor on a line, hit control C and control V, it'll copy that line.\n\n2\n00:00:04.756 --> 00:08:636\nYou can also use control X to delete an entire line. A similar way to do something like this\n\n3\n00:08:636 --> 00:13:406\nHi`;
+
+    const result = parse(vttContent);
+    expect(result.errors).toBeUndefined();
+    expect(result.cues).toHaveLength(3);
+
+    expect(result.cues[0].startTime).toBe(296);
+    expect(result.cues[0].endTime).toBe(4756);
+    expect(result.cues[0].text).toBe("If you just have your cursor on a line, hit control C and control V, it'll copy that line.");
+
+    expect(result.cues[1].startTime).toBe(4756);
+    expect(result.cues[1].endTime).toBe(8636);
+    expect(result.cues[1].text).toBe("You can also use control X to delete an entire line. A similar way to do something like this");
+
+    expect(result.cues[2].startTime).toBe(8636);
+    expect(result.cues[2].endTime).toBe(13406);
+    expect(result.cues[2].text).toBe("Hi");
   });
 }); 

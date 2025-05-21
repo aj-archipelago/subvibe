@@ -4,10 +4,47 @@ import { parser as log } from '../utils/debug';
 
 function normalizeTimestamp(originalTimestamp: string): string {
   let ts = originalTimestamp.trim().replace(',', '.');
+  // Always replace the last colon with a dot if the last segment is three digits
+  ts = ts.replace(/:(\d{3})(?!.*:\d)/, '.$1');
   // Remove any trailing non-timestamp characters (keep only digits, colon, and dot)
   ts = ts.match(/^[0-9:.]+/)?.[0] || ts;
-  // Fix: If the timestamp ends with :xxx (where xxx is 3 digits), replace the last colon with a dot
-  ts = ts.replace(/:(\d{3})(?!.*:\d)/, '.$1');
+
+  // Generic: handle any number of colon-separated segments, last is ms
+  const parts = ts.split(':');
+  if (parts.length >= 2 && /^\d{1,3}$/.test(parts[parts.length - 1])) {
+    const ms = parts.pop()!.padEnd(3, '0');
+    const s = parts.pop() ?? '00';
+    const m = parts.pop() ?? '00';
+    const h = parts.pop() ?? '00';
+    ts = `${h.padStart(2, '0')}:${m.padStart(2, '0')}:${s.padStart(2, '0')}.${ms}`;
+  }
+
+  // Special case: 00:SS:ms (should be 00:00:SS.mmm)
+  const match00SSms = ts.match(/^00:(\d{2}):(\d{3})$/);
+  if (match00SSms) {
+    ts = `00:00:${match00SSms[1]}.${match00SSms[2]}`;
+  }
+
+  // --- Begin: ultra-forgiving salvage ---
+  // If the timestamp is still not parseable, try to salvage numbers
+  const pattern = /^\d{2}:\d{2}:\d{2}\.\d{3}$/;
+  if (!pattern.test(ts)) {
+    // Extract all numbers
+    const nums = ts.match(/\d+/g) || [];
+    let h = '00', m = '00', s = '00', ms = '000';
+    if (nums.length === 4) {
+      [h, m, s, ms] = nums;
+    } else if (nums.length === 3) {
+      [m, s, ms] = nums;
+    } else if (nums.length === 2) {
+      [s, ms] = nums;
+    } else if (nums.length === 1) {
+      [s] = nums;
+    }
+    ts = `${h.padStart(2, '0')}:${m.padStart(2, '0')}:${s.padStart(2, '0')}.${ms.padEnd(3, '0')}`;
+  }
+  // --- End: ultra-forgiving salvage ---
+
   let h = "00", m = "00", s = "00", ms = "000"; // Default to 00:00:00.000
   const mainParts = ts.split(':');
 
@@ -401,8 +438,36 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
 
       try {
         // log('[parseVTT] Attempting to parse startStr:', startStr); // Reverted
-        startTime = parseVTTTimestamp(startStr);
-        // log('[parseVTT] Successfully parsed startTime:', startTime); // Reverted
+        let salvageWarning = null;
+        try {
+          startTime = parseVTTTimestamp(startStr);
+        } catch (startError) {
+          // Try to salvage again if not already
+          const salvaged = normalizeTimestamp(startStr);
+          try {
+            startTime = parseVTTTimestamp(salvaged);
+            salvageWarning = `Malformed start timestamp '${startStr}', salvaged as '${salvaged}'`;
+          } catch (e) {
+            errors.push({
+              line: i + 1,
+              message: `Unsalvageable start timestamp '${startStr}', cue skipped`,
+              severity: 'error'
+            });
+            i++;
+            while (i < lines.length && lines[i]?.trim() !== '' && !lines[i].includes('-->') && !/^(WEBVTT|STYLE|REGION|NOTE)/.test(lines[i].trim()) && !/^\d+$/.test(lines[i].trim())) {
+              i++;
+            }
+            continue;
+          }
+        }
+        // If we salvaged, push a warning
+        if (salvageWarning) {
+          errors.push({
+            line: i + 1,
+            message: salvageWarning,
+            severity: 'warning'
+          });
+        }
       } catch (startError) {
         // log('[parseVTT] Caught error parsing startStr:', startStr, startError instanceof Error ? startError.message : String(startError)); // Reverted
         errors.push({
@@ -443,8 +508,36 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
       // If we reach here, startTime is valid.
       try {
         // log('[parseVTT] Attempting to parse endStr:', endStr); // Reverted
-        endTime = parseVTTTimestamp(endStr);
-        // log('[parseVTT] Successfully parsed endTime:', endTime); // Reverted
+        let salvageWarningEnd = null;
+        try {
+          endTime = parseVTTTimestamp(endStr);
+        } catch (endError) {
+          // Try to salvage again if not already
+          const salvaged = normalizeTimestamp(endStr);
+          try {
+            endTime = parseVTTTimestamp(salvaged);
+            salvageWarningEnd = `Malformed end timestamp '${endStr}', salvaged as '${salvaged}'`;
+          } catch (e) {
+            errors.push({
+              line: i + 1,
+              message: `Unsalvageable end timestamp '${endStr}', cue skipped`,
+              severity: 'error'
+            });
+            i++;
+            while (i < lines.length && lines[i]?.trim() !== '' && !lines[i].includes('-->') && !/^(WEBVTT|STYLE|REGION|NOTE)/.test(lines[i].trim()) && !/^\d+$/.test(lines[i].trim())) {
+              i++;
+            }
+            continue;
+          }
+        }
+        // If we salvaged, push a warning
+        if (salvageWarningEnd) {
+          errors.push({
+            line: i + 1,
+            message: salvageWarningEnd,
+            severity: 'warning'
+          });
+        }
       } catch (endError) {
         // log('[parseVTT] Caught error parsing endStr:', endStr, endError instanceof Error ? endError.message : String(endError)); // Reverted
         errors.push({
