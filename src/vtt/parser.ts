@@ -4,6 +4,8 @@ import { parser as log } from '../utils/debug';
 
 function normalizeTimestamp(originalTimestamp: string): string {
   let ts = originalTimestamp.trim().replace(',', '.');
+  // Remove any trailing non-timestamp characters (keep only digits, colon, and dot)
+  ts = ts.match(/^[0-9:.]+/)?.[0] || ts;
   // Fix: If the timestamp ends with :xxx (where xxx is 3 digits), replace the last colon with a dot
   ts = ts.replace(/:(\d{3})(?!.*:\d)/, '.$1');
   let h = "00", m = "00", s = "00", ms = "000"; // Default to 00:00:00.000
