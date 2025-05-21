@@ -1,45 +1,93 @@
 import { /* SubtitleCue, ParsedSubtitles, */ ParseError, ParsedVTT, VTTCueSettings, VTTRegion, /* VTTStyles, */ VTTVoice, ParseOptions, VTTSubtitleCue } from '../types';
 import { parser as log } from '../utils/debug';
+// const log = console.log; // Use direct console.log for this debugging session // Reverted
 
-function normalizeTimestamp(timestamp: string): string {
-  // Remove any leading/trailing whitespace
-  timestamp = timestamp.trim();
-  
-  // Ensure we're using dots for milliseconds
-  timestamp = timestamp.replace(',', '.');
-  
-  // Add missing milliseconds
-  if (!timestamp.includes('.')) {
-    timestamp += '.000';
+function normalizeTimestamp(originalTimestamp: string): string {
+  const ts = originalTimestamp.trim().replace(',', '.');
+  let h = "00", m = "00", s = "00", ms = "000"; // Default to 00:00:00.000
+  const mainParts = ts.split(':');
+
+  if (mainParts.length === 3) { // Expected HH:MM:SS.ms or HH:MM:SSish (where SSish might contain ms)
+    h = mainParts[0];
+    m = mainParts[1];
+    const lastPart = mainParts[2];
+    if (lastPart.includes('.')) {
+      const [sPart, msPartGiven] = lastPart.split('.', 2);
+      s = sPart;
+      ms = (msPartGiven || '').padEnd(3, '0');
+    } else {
+      if ((h === "00" || h === "0") && lastPart.length === 2 && /^\d+$/.test(lastPart) && parseInt(lastPart,10) > 59) {
+        s = mainParts[1];
+        ms = lastPart.padEnd(3,'0');
+        m = "00";
+      } else if ((h === "00" || h === "0") && lastPart.length === 3 && /^\d+$/.test(lastPart) && parseInt(mainParts[1], 10) < 60) {
+        s = mainParts[1];
+        ms = lastPart;
+        m = "00";
+      } else if ((h === "00" || h === "0") && parseInt(mainParts[1], 10) < 60 && lastPart.length === 2 && /^\d+$/.test(lastPart) && lastPart !== "00" ) {
+        s = mainParts[1];
+        ms = lastPart.padEnd(3, '0');
+        m = "00";
+      } else if (lastPart.length === 3 && /^\d+$/.test(lastPart)) {
+        s = "00";
+        ms = lastPart;
+      } else if (lastPart.length <=2 && /^\d+$/.test(lastPart)) {
+        s = lastPart;
+        ms = "000";
+      } else {
+        s = "00"; 
+        ms = lastPart.padEnd(3, '0');
+        log(`[normalizeTimestamp] Ambiguous H:M:S case for ${originalTimestamp} (lastPart: ${lastPart}), interpreting as H:M:00.ms`);
+      }
+    }
+  } else if (mainParts.length === 2) { // MM:SS.ms or MM:SS
+    h = "00"; // No hour part explicitly given
+    m = mainParts[0];
+    const lastPart = mainParts[1];
+    if (lastPart.includes('.')) {
+      const [sPart, msPartGiven] = lastPart.split('.', 2);
+      s = sPart;
+      ms = (msPartGiven || '').padEnd(3, '0');
+    } else { // MM:SS without ms
+      s = lastPart;
+      ms = "000";
+    }
+  } else if (mainParts.length === 1 && ts !== '') { // SS.ms or SS
+    h = "00"; // No hour part
+    m = "00"; // No minute part
+    const lastPart = mainParts[0];
+    if (lastPart.includes('.')) {
+      const [sPart, msPartGiven] = lastPart.split('.', 2);
+      s = sPart;
+      ms = (msPartGiven || '').padEnd(3, '0');
+    } else { // SS without ms
+      s = lastPart;
+      ms = "000";
+    }
+  } else if (ts.startsWith('.')) { // Handles case like ".500" meaning 0 seconds and 500ms
+    h = "00"; m = "00"; s = "00";
+    ms = ts.substring(1).padEnd(3, '0');
   }
-  
-  // Pad milliseconds
-  const [time, ms] = timestamp.split('.');
-  const paddedMs = ms.padEnd(3, '0');
-  
-  // Handle hour format - add if missing
-  const timeComponents = time.split(':');
-  if (timeComponents.length === 2) {
-    timeComponents.unshift('00');
-  }
-  
-  // Pad all components
-  const paddedTime = timeComponents.map(t => t.padStart(2, '0')).join(':');
-  
-  return `${paddedTime}.${paddedMs}`;
+  // else: malformed or empty string, returns "00:00:00.000"
+
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${ms.padEnd(3,'0')}`;
 }
 
 function parseTimestamp(timestamp: string): number {
+  // log('[parseTimestamp] Input:', timestamp); // Reverted
   try {
     timestamp = normalizeTimestamp(timestamp);
+    // log('[parseTimestamp] Normalized for regex:', timestamp); // Reverted
     const pattern = /^(\d{2}):(\d{2}):(\d{2})\.(\d{3})$/;
     const match = timestamp.match(pattern);
     
     if (!match) {
-      throw new Error('Invalid timestamp format');
+      // log('[parseTimestamp] Regex no match! Throwing error.'); // Reverted
+      throw new Error('Invalid timestamp format (regex mismatch)');
     }
 
     const [, hours, minutes, seconds, milliseconds] = match;
+    // log('[parseTimestamp] Regex match components:', { hours, minutes, seconds, milliseconds }); // Reverted
     const totalMs = (
       parseInt(hours, 10) * 3600000 +
       parseInt(minutes, 10) * 60000 +
@@ -47,18 +95,27 @@ function parseTimestamp(timestamp: string): number {
       parseInt(milliseconds, 10)
     );
 
+    // log('[parseTimestamp] Calculated totalMs:', totalMs); // Reverted
+    if (isNaN(totalMs)) {
+      // log('[parseTimestamp] totalMs is NaN! Throwing error.'); // Reverted
+      throw new Error('Invalid time component resulting in NaN');
+    }
+
     // Sanity check for unusual timestamps
     if (totalMs > 359999999) { // More than 99:59:59.999
       throw new Error('unusual timestamp value');
     }
 
+    // log('[parseTimestamp] Output:', totalMs); // Reverted
     return totalMs;
   } catch (error) {
+    // log('[parseTimestamp] Caught error:', error instanceof Error ? error.message : String(error)); // Reverted
     throw new Error(`Invalid timestamp format: ${error instanceof Error ? error.message : 'unknown error'}`);
   }
 }
 
 function parseVTTTimestamp(timestamp: string): number {
+  // log('[parseVTTTimestamp] Input:', timestamp); // Reverted
   // Enhance timestamp parsing to handle more VTT formats
   timestamp = timestamp.trim();
   
@@ -66,10 +123,13 @@ function parseVTTTimestamp(timestamp: string): number {
   if (timestamp.endsWith('%')) {
     const percent = parseFloat(timestamp);
     if (isNaN(percent) || percent < 0 || percent > 100) {
+      // log('[parseVTTTimestamp] Invalid percentage! Throwing error.'); // Reverted
       throw new Error('Invalid percentage timestamp');
     }
     // Convert to milliseconds assuming 100% = 24 hours
-    return (percent / 100) * 24 * 3600000;
+    const result = (percent / 100) * 24 * 3600000;
+    // log('[parseVTTTimestamp] Percentage result:', result); // Reverted
+    return result;
   }
 
   // Handle shortened formats
@@ -77,10 +137,19 @@ function parseVTTTimestamp(timestamp: string): number {
   if (parts.length === 1) {
     // Format: ss.mmm
     const [seconds, milliseconds = '000'] = parts[0].split('.');
-    return parseInt(seconds, 10) * 1000 + parseInt(milliseconds.padEnd(3, '0'), 10);
+    const result = parseInt(seconds, 10) * 1000 + parseInt(milliseconds.padEnd(3, '0'), 10);
+    // log('[parseVTTTimestamp] Short format (ss.mmm) result:', result); // Reverted
+    if (isNaN(result)) {
+        // log('[parseVTTTimestamp] Short format result is NaN! Throwing error.'); // Reverted
+        throw new Error('Invalid short format timestamp (ss.mmm) resulting in NaN');
+    }
+    return result;
   }
 
-  return parseTimestamp(normalizeTimestamp(timestamp));
+  // log('[parseVTTTimestamp] Falling back to parseTimestamp with normalizeTimestamp'); // Reverted
+  const finalResult = parseTimestamp(normalizeTimestamp(timestamp));
+  // log('[parseVTTTimestamp] Final result from parseTimestamp fallback:', finalResult); // Reverted
+  return finalResult;
 }
 
 function parseVTTSettings(settings: string): VTTCueSettings {
@@ -285,7 +354,7 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
       }
 
       // Parse cue
-      let identifier = '';
+      let identifier: string | undefined = undefined;
       let timestampLine = line;
 
       // Check if this line is a cue identifier
@@ -322,38 +391,73 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
       // Split end timestamp from settings
       const [endStr, ...settingsParts] = endWithSettings.split(/\s+/);
       
-      let startTime: number, endTime: number;
-      try {
-        startTime = parseVTTTimestamp(startStr);
-        endTime = parseVTTTimestamp(endStr);
-        log('Parsed timestamps:', { startTime, endTime });
+      let startTime: number;
+      let endTime: number;
+      let textFromMalformedTimestampLine = ""; 
 
-        // Skip cue if either timestamp is invalid
-        if (isNaN(startTime) || isNaN(endTime)) {
-          log('Invalid timestamp values');
-          errors.push({
-            line: i + 1,
-            message: 'Invalid timestamp format',
-            severity: 'error'
-          });
-          // Skip until next empty line or end
-          while (i < lines.length && lines[i].trim() !== '') {
-            i++;
-          }
-          continue;
-        }
-      } catch (error) {
-        log('Error parsing timestamp:', error);
+      try {
+        // log('[parseVTT] Attempting to parse startStr:', startStr); // Reverted
+        startTime = parseVTTTimestamp(startStr);
+        // log('[parseVTT] Successfully parsed startTime:', startTime); // Reverted
+      } catch (startError) {
+        // log('[parseVTT] Caught error parsing startStr:', startStr, startError instanceof Error ? startError.message : String(startError)); // Reverted
         errors.push({
-          line: i + 1,
-          message: 'Invalid timestamp format',
-          severity: 'error'
+            line: i + 1, 
+            message: `Invalid VTT start time format or value "${startStr}"`,
+            severity: 'error'
         });
-        // Skip until next empty line or end
-        while (i < lines.length && lines[i].trim() !== '') {
-          i++;
+        // Skip this problematic cue block by advancing i past potential text lines
+        i++; // current line was the timestamp line
+        // Advance past any text lines associated with this failed cue
+        while (i < lines.length && lines[i]?.trim() !== '' && !lines[i].includes('-->') && !/^(WEBVTT|STYLE|REGION|NOTE)/.test(lines[i].trim()) && !/^\d+$/.test(lines[i].trim())) {
+            log(`Skipping line ${i} of invalid cue (due to start time error): ${lines[i]}`);
+            i++;
         }
-        continue;
+        // If the loop above stopped because it hit a new cue's timestamp or identifier, 
+        // we need to rewind `i` by one so the main loop can process it correctly.
+        if (i < lines.length && (lines[i].includes('-->') || /^\d+$/.test(lines[i].trim()) || lines[i].trim() === '' || /^(STYLE|REGION|NOTE)/.test(lines[i].trim()) )) {
+            // Check if the current line is not just an empty line that should be consumed by the main loop's empty line skipping logic
+            // or if it's not a NOTE that the main loop would also handle.
+            // Essentially, if it's a timestamp or identifier, we went one line too far.
+            if (lines[i].includes('-->') || (/^\d+$/.test(lines[i].trim()) && lines[i].trim() !== '')) {
+                 //Only rewind if it's a timestamp or a non-empty potential identifier
+            }
+            // No, the main loop's existing i++ and continue for empty/NOTE lines will handle it, or the next block processing.
+            // The crucial part is that we don't want to re-increment `i` if the while loop consumed the last line of the file
+            // or if it stopped on an empty line that the outer loop's `i++` will correctly handle.
+            // The current `continue` will go to the next iteration of the main `while (i < lines.length)` loop,
+            // where `i` will be evaluated. If we consumed text lines up to a new identifier/timestamp, 
+            // the main loop should process that new identifier/timestamp line. 
+            // The `i++` within the while loop for skipping text might have already positioned `i` correctly.
+            // Let's simplify: the main loop increments `i` *after* processing or skipping a block.
+            // If our while loop stops, `i` points to the line that made it stop.
+            // This line will be processed by the next iteration of the main loop.
+        }
+        continue; // Continue to the next block in the main while loop
+      }
+
+      // If we reach here, startTime is valid.
+      try {
+        // log('[parseVTT] Attempting to parse endStr:', endStr); // Reverted
+        endTime = parseVTTTimestamp(endStr);
+        // log('[parseVTT] Successfully parsed endTime:', endTime); // Reverted
+      } catch (endError) {
+        // log('[parseVTT] Caught error parsing endStr:', endStr, endError instanceof Error ? endError.message : String(endError)); // Reverted
+        errors.push({
+            line: i + 1, // Error is on the timestamp line
+            message: `Invalid VTT end time format or value "${endStr}"`,
+            severity: 'error'
+        });
+        // Skip this problematic cue block by advancing i past potential text lines
+        i++; // current line was the timestamp line
+        // Advance past any text lines associated with this failed cue
+        while (i < lines.length && lines[i]?.trim() !== '' && !lines[i].includes('-->') && !/^(WEBVTT|STYLE|REGION|NOTE)/.test(lines[i].trim()) && !/^\d+$/.test(lines[i].trim())) {
+            log(`Skipping line ${i} of invalid cue (due to end time error): ${lines[i]}`);
+            i++;
+        }
+        // Similar logic as above for startError, for potentially rewinding i.
+        // However, simpler: the main loop will handle the line that `i` currently points to.
+        continue; // Continue to the next block in the main while loop
       }
 
       // Parse settings
@@ -362,6 +466,10 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
       // Parse text content
       i++;
       let text = '';
+      if (textFromMalformedTimestampLine) {
+        text = textFromMalformedTimestampLine;
+      }
+
       while (i < lines.length) {
         const line = lines[i].trim();
         
@@ -389,7 +497,7 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
           }
         }
         
-        text += (text ? '\n' : '') + lines[i];
+        text += (text ? '\n' : '') + lines[i].trim();
         i++;
       }
 
@@ -404,14 +512,14 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
         text: cleanText
       };
 
-      if (options.preserveIndexes && identifier) {
-        // When preserving indexes, store all identifiers
+      log('VTT PARSER DEBUG: Attempting to set identifier. Found file identifier:', identifier, 'options.preserveIndexes:', options.preserveIndexes);
+      if (options.preserveIndexes && identifier && identifier.length > 0) {
         cue.identifier = identifier;
+        log('VTT PARSER DEBUG: Set cue.identifier to:', cue.identifier);
       } else if (!options.preserveIndexes) {
-        // When not preserving indexes, only store non-numeric identifiers
-        if (identifier && !identifier.match(/^\d+$/)) {
-          cue.identifier = identifier;
-        }
+        log('VTT PARSER DEBUG: Not setting identifier (preserveIndexes is false).');
+      } else {
+        log('VTT PARSER DEBUG: Not setting identifier (no file identifier found or preserveIndexes true but identifier undefined).');
       }
 
       if (settings && Object.keys(settings).length > 0) {

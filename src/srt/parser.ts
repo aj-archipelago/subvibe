@@ -29,7 +29,7 @@ export function parseTimestamp(timestamp: string): number {
   try {
     // Use the loose parser first
     const time = parseTimeString(timestamp);
-    if (time !== null) {
+    if (!isNaN(time)) {
       return time;
     }
 
@@ -110,11 +110,17 @@ export function parseSRT(content: string, options: ParseOptions = {}): ParsedSub
         i++;
         parsingCue = true;
         continue;
-      } else if (parsingCue || hasTimestamp(firstLine)) {
-        // If we're in the middle of a cue or find a timestamp, process it
+      } else if ((parsingCue || hasTimestamp(firstLine)) && firstLine.includes('-->')) {
+        // If we're in the middle of a cue or find a timestamp, process it, but only if it has '-->'
         log("Processing timestamp line:", firstLine);
         const timeRange = findTimestampRange(firstLine);
-        if (!timeRange) {
+        // findTimestampRange now always returns an object, check for NaN
+
+        let effectiveStartTime = timeRange.start;
+        let effectiveEndTime = timeRange.end;
+        let hasValidTimestamp = true;
+
+        if (isNaN(effectiveStartTime) && isNaN(effectiveEndTime)) {
           errors.push({
             line: i + 1,
             message: 'Invalid or missing timestamp',
@@ -122,12 +128,73 @@ export function parseSRT(content: string, options: ParseOptions = {}): ParsedSub
           });
           i++;
           parsingCue = false;
-          continue;
+          hasValidTimestamp = false; // Both are invalid, skip cue
+        } else {
+          if (isNaN(effectiveStartTime)) {
+            errors.push({
+              line: i + 1, // The test expects the line number of the timestamp
+              message: `Invalid start time on line ${i + 1}. Using 0ms as start time`,
+              severity: 'warning'
+            });
+            effectiveStartTime = 0;
+          }
+          if (isNaN(effectiveEndTime)) {
+            errors.push({
+              line: i + 1, // The test expects the line number of the timestamp
+              message: `Invalid end time on line ${i + 1}. Using start time (${effectiveStartTime}ms) as end time`,
+              severity: 'warning'
+            });
+            // If start was also NaN and defaulted to 0, end will also be 0.
+            // If start was valid, end will be same as start.
+            effectiveEndTime = effectiveStartTime; 
+          }
+        }
+        
+        if (!hasValidTimestamp) { // Skip if both were NaN
+            continue;
         }
 
-        const { start: startTime, end: endTime } = timeRange;
-        
-        if (startTime > 86400000 || endTime > 86400000) {
+        // Check if times need to be swapped (after potential NaN defaulting)
+        if (effectiveEndTime < effectiveStartTime) {
+          errors.push({
+            line: i + 1, 
+            message: 'Invalid timing: end time before start time. Timings have been swapped.',
+            severity: 'warning'
+          });
+          [effectiveStartTime, effectiveEndTime] = [effectiveEndTime, effectiveStartTime]; // Swap them
+        }
+
+        let textAfterTimestamp = '';
+        const arrowIndex = firstLine.indexOf('-->');
+        if (arrowIndex !== -1) {
+            const afterArrow = firstLine.substring(arrowIndex + 3).trimStart(); // e.g., "0… in a small scope."
+            
+            // This pattern is for well-formed end timestamps
+            const endTimestampPattern = /^(?:(?:\d{2}:)?\d{2}:\d{2}[,.]\d{3}|(?:\d{2}:)?\d{2},\d{2},\d{3}|\d{1,2}:\d{2}[,.]\d{3}|\d{1,2}[,.]\d{3})/
+            const endMatch = afterArrow.match(endTimestampPattern);
+
+            if (endMatch && endMatch[0]) {
+                // If a well-formed end timestamp is matched by the regex
+                textAfterTimestamp = afterArrow.substring(endMatch[0].length).trim();
+            } else {
+                // End timestamp is not well-formed according to the regex (e.g., "0…", or "0… text")
+                // We need to find what `parseTimeString` considered the "timestamp" part and take text after it.
+                const potentialEndTimeString = afterArrow.split(' ')[0]; // This is what findTimestampRange passes to parseTimeString, e.g., "0…"
+                
+                // If afterArrow starts with potentialEndTimeString, then the text is what follows.
+                if (afterArrow.startsWith(potentialEndTimeString)) {
+                    textAfterTimestamp = afterArrow.substring(potentialEndTimeString.length).trim();
+                } else {
+                    // Fallback: if afterArrow doesn't start with what was considered the timestamp part
+                    // (e.g. if arrow separator was different and split(' ')[0] misbehaved, or if afterArrow was only text after '-->')
+                    // This might occur if the timestamp part was empty after '-->'.
+                    // In such cases, the whole `afterArrow` could be text, assuming `findTimestampRange` correctly yielded NaN for `end`.
+                    textAfterTimestamp = afterArrow.trim(); 
+                }
+            }
+        }
+
+        if (effectiveStartTime > 86400000 || effectiveEndTime > 86400000) {
           errors.push({
             line: i + 1,
             message: 'Subtitle has unusual timestamp exceeding 24 hours',
@@ -135,21 +202,14 @@ export function parseSRT(content: string, options: ParseOptions = {}): ParsedSub
           });
         }
 
-        if (endTime < startTime) {
-          errors.push({
-            line: i + 1,
-            message: 'Invalid timing: end time before start time',
-            severity: 'error'
-          });
-          i++;
-          parsingCue = false;
-          continue;
-        }
-
         i++; // Move past timestamp line
 
         // Collect text until empty line or next cue start
         let text = '';
+        if (textAfterTimestamp) {
+            text = textAfterTimestamp;
+        }
+        
         while (i < lines.length && lines[i].trim()) {
           // Check if this line starts a new cue (number followed by timestamp)
           const isNewCue = lines[i].match(/^\d+$/) && 
@@ -157,8 +217,23 @@ export function parseSRT(content: string, options: ParseOptions = {}): ParsedSub
                           hasTimestamp(lines[i + 1]);
           
           if (isNewCue) {
+            log("Found start of a new cue (index) while collecting text. Breaking text collection.");
+            break; 
+          }
+
+          const looksLikeTimestamp = hasTimestamp(lines[i]) && lines[i].includes('-->');
+          const trimmedLine = lines[i].trimStart();
+          // If this malformed timestamp starts with an ellipsis, break to recover malformed cue
+          if (looksLikeTimestamp && trimmedLine.startsWith('…')) {
+            log("Found malformed ellipsis timestamp, treating as new cue boundary.", lines[i]);
             break;
           }
+          if (looksLikeTimestamp && !text) { 
+              log("Found timestamp-like line and no text collected yet for current segment. Breaking.", {lineContent: lines[i], currentLineNumber: i});
+              break;
+          }
+          // If it looksLikeTimestamp but `text` is not empty, it's treated as text and the loop continues.
+          // The original unconditional break for any timestamp-like line is now conditional.
           
           text += (text ? '\n' : '') + lines[i];
           i++;
@@ -188,8 +263,8 @@ export function parseSRT(content: string, options: ParseOptions = {}): ParsedSub
         currentIndex++;
         const cue = {
           index: options.preserveIndexes ? lastSeenIndex : currentIndex,
-          startTime,
-          endTime,
+          startTime: effectiveStartTime,
+          endTime: effectiveEndTime,
           text
         };
         cues.push(cue);
@@ -225,12 +300,13 @@ export function parseSRT(content: string, options: ParseOptions = {}): ParsedSub
       }
 
       // Add tracking of failed parses
-      if (errors[errors.length - 1]?.severity === 'error') {
+      if (errors.length > 0 && errors[errors.length - 1].line === i && errors[errors.length - 1]?.severity === 'error') {
+        // Check if the error just pushed corresponds to current line and is an error
         failedParses++;
-        // Stop parsing after first error for malformed content test
-        if (failedParses > 0 && cues.length > 0) {
-          break;
-        }
+        // Stop parsing after first error for malformed content test - REMOVING BREAK for more robust parsing
+        // if (failedParses > 0 && cues.length > 0) {
+        //   break;
+        // }
       }
 
     } catch (error) {

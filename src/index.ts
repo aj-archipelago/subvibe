@@ -6,6 +6,8 @@ import { SubtitleUtils } from './utils';
 import { ParsedSubtitles, SubtitleCue, TimeShiftOptions, BuildOptions, ParsedVTT, ParseOptions } from './types';
 import { detectFormat, extractFromMarkdown } from './core-utils';
 
+const defaultParseOptions: ParseOptions = { preserveIndexes: true };
+
 /**
  * Parse subtitle content in either SRT or VTT format.
  * The format will be automatically detected based on the content.
@@ -26,7 +28,9 @@ import { detectFormat, extractFromMarkdown } from './core-utils';
  * console.log(result.cues);  // array of parsed subtitle cues
  * ```
  */
-function parse(content: string, options: ParseOptions = {}): ParsedSubtitles {
+function parse(content: string, providedOptions: ParseOptions = {}): ParsedSubtitles {
+    const options = { ...defaultParseOptions, ...providedOptions }; // Ensure defaults are applied
+
     const formatResult = detectFormat(content);
     
     // Extract content from markdown if needed
