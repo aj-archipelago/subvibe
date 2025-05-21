@@ -3,7 +3,9 @@ import { parser as log } from '../utils/debug';
 // const log = console.log; // Use direct console.log for this debugging session // Reverted
 
 function normalizeTimestamp(originalTimestamp: string): string {
-  const ts = originalTimestamp.trim().replace(',', '.');
+  let ts = originalTimestamp.trim().replace(',', '.');
+  // Fix: If the timestamp ends with :xxx (where xxx is 3 digits), replace the last colon with a dot
+  ts = ts.replace(/:(\d{3})(?!.*:\d)/, '.$1');
   let h = "00", m = "00", s = "00", ms = "000"; // Default to 00:00:00.000
   const mainParts = ts.split(':');
 

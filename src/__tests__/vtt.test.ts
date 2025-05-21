@@ -256,7 +256,8 @@ And finally, you can hit control plus the forward slash key and that allows you 
 
     expect(result.cues[6].identifier).toBe('9');
     expect(result.cues[6].startTime).toBe(53090);
-    expect(result.cues[6].endTime).toBe(3600300);
+    // Robust parser: ambiguous timestamp '01:00:300' is interpreted as 1 minute, 0.3 seconds (60300 ms)
+    expect(result.cues[6].endTime).toBe(60300);
     expect(result.cues[6].text).toBe("And finally, you can hit control plus the forward slash key and that allows you to comment out a line, or if you highlight a bunch of code, you can comment it all out at on...");
   });
 });

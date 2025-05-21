@@ -164,3 +164,21 @@ describe('VTT Parser Issue: Only One Cue Parsed (as-is string)', () => {
 
   });
 });
+
+describe('VTT Parser Issue: Invalid Timestamp with Colon Before Milliseconds', () => {
+  it('should parse cues with colon before milliseconds', () => {
+    const vttContent = `WEBVTT\n\n1\n00:00:00.220 --> 00:00:04.490\nValid cue\n\n2\n00:00:04:550 --> 00:00:07:550\nCue with colon before ms\n\n3\n00:00:08:560 --> 00:00:13:560\nAnother cue`;
+    const result = parseVTT(vttContent);
+    expect(result.cues.length).toBe(3);
+    expect(result.errors).toBeUndefined();
+  });
+
+  it('should parse all cues after fixing colon to dot before milliseconds', () => {
+    let vttContent = `WEBVTT\n\n1\n00:00:00.220 --> 00:00:04.490\nValid cue\n\n2\n00:00:04:550 --> 00:00:07:550\nCue with colon before ms\n\n3\n00:00:08:560 --> 00:00:13:560\nAnother cue`;
+    // Fix timestamps: replace last colon in timestamp with dot
+    vttContent = vttContent.replace(/(\d{2}:\d{2}):(\d{3})/g, '$1.$2');
+    const result = parseVTT(vttContent);
+    expect(result.cues.length).toBe(3);
+    expect(result.errors).toBeUndefined();
+  });
+});
