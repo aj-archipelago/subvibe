@@ -85,7 +85,7 @@ export const parseTimeString = (timeStr: string): number => {
 
     // Pre-process for ambiguous format like HH:MM,SS,mmm (e.g., 00:00,03,774)
     // This regex looks for two digits, a colon, two digits, a comma, two digits, a comma, three digits.
-    const ambiguousPattern = /^(\d{2}:\d{2}),(\d{2}),(\d{3})/;
+    const ambiguousPattern = /^(\d{2}:\d{2}),(\d{2}),(\d{3})$/;
     const ambiguousMatch = timeStr.match(ambiguousPattern);
     if (ambiguousMatch) {
       timeStr = `${ambiguousMatch[1]}:${ambiguousMatch[2]},${ambiguousMatch[3]}`;

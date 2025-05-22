@@ -110,7 +110,7 @@ export function parseSRT(content: string, options: ParseOptions = {}): ParsedSub
         i++;
         parsingCue = true;
         continue;
-      } else if ((parsingCue || hasTimestamp(firstLine)) && firstLine.includes('-->')) {
+      } else if ((parsingCue || firstLine.includes('-->'))) {
         // If we're in the middle of a cue or find a timestamp, process it, but only if it has '-->'
         log("Processing timestamp line:", firstLine);
         const timeRange = findTimestampRange(firstLine);

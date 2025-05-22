@@ -434,7 +434,6 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
       
       let startTime: number;
       let endTime: number;
-      let textFromMalformedTimestampLine = ""; 
 
       try {
         // log('[parseVTT] Attempting to parse startStr:', startStr); // Reverted
@@ -563,9 +562,6 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
       // Parse text content
       i++;
       let text = '';
-      if (textFromMalformedTimestampLine) {
-        text = textFromMalformedTimestampLine;
-      }
 
       while (i < lines.length) {
         const line = lines[i].trim();
@@ -612,11 +608,15 @@ export function parseVTT(content: string, options: ParseOptions = { preserveInde
       log('VTT PARSER DEBUG: Attempting to set identifier. Found file identifier:', identifier, 'options.preserveIndexes:', options.preserveIndexes);
       if (options.preserveIndexes && identifier && identifier.length > 0) {
         cue.identifier = identifier;
-        log('VTT PARSER DEBUG: Set cue.identifier to:', cue.identifier);
+        // log('VTT PARSER DEBUG: Set cue.identifier to:', cue.identifier); // Remove or gate
       } else if (!options.preserveIndexes) {
-        log('VTT PARSER DEBUG: Not setting identifier (preserveIndexes is false).');
+        // When not preserving indexes, only store non-numeric identifiers
+        if (identifier && !identifier.match(/^[0-9]+$/)) {
+          cue.identifier = identifier;
+        }
+        // log('VTT PARSER DEBUG: Not setting identifier (preserveIndexes is false).'); // Remove or gate
       } else {
-        log('VTT PARSER DEBUG: Not setting identifier (no file identifier found or preserveIndexes true but identifier undefined).');
+        // log('VTT PARSER DEBUG: Not setting identifier (no file identifier found or preserveIndexes true but identifier undefined).'); // Remove or gate
       }
 
       if (settings && Object.keys(settings).length > 0) {
