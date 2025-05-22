@@ -60,8 +60,9 @@ export const detectFormat = (content: string): FormatDetectionResult => {
 
     // Check for SRT format (numbered entries followed by timestamps)
     const lines = extractedContent.trim().split('\n');
-    if (lines.length > 2 && /^\d+$/.test(lines[0].trim()) && 
-        /^(?:\d{2}:)?\d{2}:\d{2},\d{3} --> (?:\d{2}:)?\d{2}:\d{2},\d{3}$/.test(lines[1].trim())) {
+    const srtTimestampLineRegex = /^(?:(?:\d{2}:)?\d{2}:\d{2}[,.]\d{3})\s*-->\s*(?:(?:\d{2}:)?\d{2}:\d{2}[,.]\d{3}|(?:\d{2}:)?\d{2},\d{2},\d{3})(?:\s+.*)?$/;
+    if (lines.length > 1 && /^\d+$/.test(lines[0].trim()) && 
+        srtTimestampLineRegex.test(lines[1].trim())) {
         return { type: 'srt' };
     }
 
@@ -81,24 +82,63 @@ export const detectFormat = (content: string): FormatDetectionResult => {
 export const parseTimeString = (timeStr: string): number => {
     // Normalize the timestamp format
     timeStr = timeStr.trim();
+
+    // Pre-process for ambiguous format like HH:MM,SS,mmm (e.g., 00:00,03,774)
+    // This regex looks for two digits, a colon, two digits, a comma, two digits, a comma, three digits.
+    const ambiguousPattern = /^(\d{2}:\d{2}),(\d{2}),(\d{3})$/;
+    const ambiguousMatch = timeStr.match(ambiguousPattern);
+    if (ambiguousMatch) {
+      timeStr = `${ambiguousMatch[1]}:${ambiguousMatch[2]},${ambiguousMatch[3]}`;
+    }
+
+    // NEW: Handle H:S:mmm, S:mmm, Smmm (where mmm is 3-digit ms and no explicit separator)
+    if (!timeStr.includes(',') && !timeStr.includes('.')) {
+        const p = timeStr.split(':');
+        if (p.length === 3 && p[2].length === 3 && /^\d+$/.test(p[2])) { // H:S:mmm e.g., 00:04:604
+            const h = parseInt(p[0], 10);
+            const s = parseInt(p[1], 10);
+            const ms = parseInt(p[2], 10);
+            // Ensure s < 60 to differentiate from H:M:S where S might be large (handled later)
+            if (!isNaN(h) && !isNaN(s) && !isNaN(ms) && h < 100 && s < 60) {
+                return (h * 3600 + s) * 1000 + ms;
+            }
+        } else if (p.length === 2 && p[1].length === 3 && /^\d+$/.test(p[1])) { // S:mmm e.g., 04:604 (04 is seconds)
+            const s = parseInt(p[0], 10);
+            const ms = parseInt(p[1], 10);
+            // Ensure s is reasonable (e.g. not 60+ which implies it was minutes for M:S)
+            if (!isNaN(s) && !isNaN(ms) && s < 3600) { // Max 59:59 for SS:mmm if we interpret s as SS
+                 return s * 1000 + ms;
+            }
+        } else if (p.length === 1 && p[0].length >= 4 && p[0].length <= 7 && /^\d+$/.test(p[0])) { // Smmm, SSmmm, SSSmmm etc.
+            const numStr = p[0];
+            const msVal = parseInt(numStr.slice(-3), 10);
+            const sVal = parseInt(numStr.slice(0, -3), 10);
+            if (!isNaN(msVal) && !isNaN(sVal) && numStr.slice(-3).length === 3) {
+                return sVal * 1000 + msVal;
+            }
+        }
+    }
     
     // Handle SS.mmm format
-    if (timeStr.match(/^\d+\.\d+$/)) {
-        const [seconds, ms] = timeStr.split('.');
-        return parseInt(seconds) * 1000 + parseInt(ms.padEnd(3, '0'));
+    const ssMatch = timeStr.match(/^(\d+)\.(\d{1,3})/);
+    if (ssMatch) {
+        const [, seconds, ms] = ssMatch;
+        return parseInt(seconds, 10) * 1000 + parseInt(ms.padEnd(3, '0'), 10);
     }
     
     // Handle MM:SS,mmm or MM:SS.mmm format
-    if (timeStr.match(/^\d{1,2}:\d{2}[,.]\d{3}$/)) {
-        const [time, ms] = timeStr.split(/[,.]/);
+    const mmssMatch = timeStr.match(/^(\d{1,2}:\d{2})[,.](\d{1,3})/);
+    if (mmssMatch) {
+        const [, time, ms] = mmssMatch;
         const [minutes, seconds] = time.split(':').map(Number);
-        return (minutes * 60 + seconds) * 1000 + parseInt(ms);
+        return (minutes * 60 + seconds) * 1000 + parseInt(ms.padEnd(3, '0'), 10);
     }
     
     // Handle HH:MM:SS,mmm format
     const parts = timeStr.split(/[,.]/);
     const time = parts[0];
-    const ms = parts[1] || '000';
+    // Extract only digits for ms part if there was trailing text
+    const msDigits = (parts[1] || '000').match(/^\d{1,3}/)?.[0] || '000';
     
     const timeParts = time.split(':').map(Number);
     
@@ -108,7 +148,30 @@ export const parseTimeString = (timeStr: string): number => {
     }
     
     const [hours, minutes, seconds] = timeParts;
-    return (hours * 3600 + minutes * 60 + seconds) * 1000 + parseInt(ms.padEnd(3, '0'));
+
+    // Handle implicit milliseconds if no explicit ms part (msDigits is default '000') and parts.length is 1 (no separator used for ms)
+    if (msDigits === '000' && parts.length === 1 && timeParts.length > 0) {
+        const lastTimePartIndex = timeParts.length - 1;
+        const lastPartValue = timeParts[lastTimePartIndex]; // This would be seconds, or minutes if only M:S, or hours if only H
+
+        // Check if the last part looks like it contains seconds and milliseconds (e.g., SSSmmm or SSmmm or Smmm)
+        // And it's not a simple small number of seconds (e.g. 1 to 999 which is handled fine by original logic)
+        if (lastPartValue > 999 && lastPartValue < 60000) { // If lastPartValue is like 4507 (for seconds.ms) or similar
+            const inferredMs = lastPartValue % 1000;
+            const actualSeconds = Math.floor(lastPartValue / 1000);
+            
+            timeParts[lastTimePartIndex] = actualSeconds;
+            // Reconstruct hours, minutes, seconds based on potentially modified timeParts
+            const finalTimeSegments = [...timeParts]; // Create a new array to pad correctly if needed
+            while (finalTimeSegments.length < 3) {
+                finalTimeSegments.unshift(0);
+            }
+            const [h, m, s] = finalTimeSegments;
+            return (h * 3600 + m * 60 + s) * 1000 + inferredMs;
+        }
+    }
+
+    return (hours * 3600 + minutes * 60 + seconds) * 1000 + parseInt(msDigits.padEnd(3, '0'), 10);
 };
 
 /**
@@ -128,12 +191,22 @@ export const hasTimestamp = (text: string): boolean => {
 /**
  * Extract timestamp range from text
  */
-export const findTimestampRange = (text: string): { start: number; end: number } | null => {
+export const findTimestampRange = (text: string): { start: number; end: number } => {
     const parts = text.split(/-->|->|-|to|\t/).map(p => p.trim());
-    if (parts.length < 2) return null;
     
-    const start = parseTimeString(parts[0]);
-    const end = parseTimeString(parts[1]);
+    let start = NaN;
+    let end = NaN;
+
+    if (parts.length >= 1) {
+        start = parseTimeString(parts[0]);
+    }
+    if (parts.length >= 2) {
+        // Ensure we only pass the timestamp part of parts[1] to parseTimeString
+        // by splitting parts[1] at the first space if one exists.
+        const endPartFull = parts[1];
+        const endPartTimestamp = endPartFull.split(' ')[0];
+        end = parseTimeString(endPartTimestamp);
+    }
     
-    return start !== null && end !== null ? { start, end } : null;
+    return { start, end };
 };
