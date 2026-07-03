@@ -1,4 +1,4 @@
-import { SubtitleCue, ParsedSubtitles, TimeShiftOptions, ParseError, VTTRegion, VTTSubtitleCue } from './types';
+import { SubtitleCue, ParsedSubtitles, TimeShiftOptions, ParseError } from './types';
 import { parseSRT } from './srt/parser';
 import { parseVTT } from './vtt/parser';
 import { extractFromMarkdown } from './core-utils';
@@ -493,7 +493,7 @@ export class SubtitleUtils {
    */
   static detectAndParse(content: string): ParsedSubtitles {
     // Check if content is wrapped in markdown code blocks and extract if needed
-    const { content: extractedContent, wasExtracted } = this.extractFromMarkdown(content);
+    const { content: extractedContent } = this.extractFromMarkdown(content);
     
     // Early return for empty content
     if (!extractedContent?.trim()) {

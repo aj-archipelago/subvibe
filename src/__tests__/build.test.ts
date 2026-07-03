@@ -114,4 +114,41 @@ describe('build function', () => {
         const normalizeStr = (str: string) => str.replace(/\r\n/g, '\n').trim();
         expect(normalizeStr(rebuilt)).toBe(normalizeStr(original));
     });
+
+    test('should return empty text for invalid runtime input', () => {
+        expect(() => build(null as any, { format: 'text' })).not.toThrow();
+        expect(() => build({} as any, { format: 'text' })).not.toThrow();
+        expect(() => build('not cues' as any, { format: 'text' })).not.toThrow();
+
+        expect(build(null as any, { format: 'text' })).toBe('');
+        expect(build({} as any, { format: 'text' })).toBe('');
+        expect(build('not cues' as any, { format: 'text' })).toBe('');
+    });
+
+    test('should filter malformed cues without dropping valid cues', () => {
+        const parsedInput = {
+            type: 'srt' as const,
+            cues: [
+                { index: 1, startTime: 0, endTime: 1000, text: 'Keep me' },
+                { index: 2, startTime: 1000, endTime: 'bad', text: 'Drop me' },
+                { index: 3, startTime: 2000, endTime: 3000, text: 123 }
+            ]
+        };
+
+        expect(build(parsedInput as any, { format: 'text' })).toBe('Keep me\n\n123');
+    });
+
+    test('should filter malformed cues for subtitle output', () => {
+        const cues = [
+            { index: 10, startTime: 0, endTime: 1000, text: 'Keep me' },
+            { index: 11, startTime: NaN, endTime: 2000, text: 'Drop me' },
+            { index: 12, startTime: 2000, endTime: 3000, text: null }
+        ];
+
+        const result = build(cues as any, { format: 'srt', preserveIndexes: true });
+
+        expect(result).toContain('10\n00:00:00,000 --> 00:00:01,000\nKeep me');
+        expect(result).not.toContain('Drop me');
+        expect(result).not.toContain('NaN');
+    });
 });

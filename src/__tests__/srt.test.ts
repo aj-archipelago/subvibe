@@ -1,6 +1,6 @@
 import { parseSRT } from '../srt/parser';
 import { generateSRT, convertVTTCuesToSRT } from '../srt/generator';
-import { SubtitleCue, VTTSubtitleCue, ParsedVTT } from '../types';
+import { SubtitleCue, VTTSubtitleCue } from '../types';
 import { parse } from '../index';
 
 
@@ -602,7 +602,6 @@ And finally.`;
 
     const result = parse(srtContentWithIssues, { preserveIndexes: true });
 
-    // console.log('Test Case srtContentWithIssues - Result:', JSON.stringify(result, null, 2));
 
     expect(result.type).toBe('srt');
     expect(result.errors).toBeDefined();
@@ -891,7 +890,6 @@ And finally, you can hit control plus the forward slash key and that allows you 
 And that allows you to comment out a line or if you highlight a bunch of code, you can comment it all out a...`;
 
     const result = parse(srtContent, { preserveIndexes: true });
-    // console.log('DEBUG: result.errors for handles malformed timestamp with text...', JSON.stringify(result.errors, null, 2)); // Keep for now if needed
 
     expect(result.type).toBe('srt');
     expect(result.errors).toBeDefined();
@@ -958,10 +956,6 @@ And that allows you to comment out a line or if you highlight a bunch of code, y
       e.line === 18 && // Corrected: Line of index "10" is 16 in the compact SRT string
       e.severity === 'warning'
     );
-    if (!nonSequentialError) {
-      // Adding console.log specifically for this failing test and this error check
-      console.log('DEBUG (malformed with recovery test): nonSequentialError not found on line 18. All errors:', JSON.stringify(result.errors, null, 2));
-    }
     expect(nonSequentialError).toBeDefined();
   });
 });
@@ -1490,7 +1484,6 @@ And finally, you can hit control plus the forward slash key and that allows you 
       expect(vttCues).toHaveLength(7); 
 
       // DEBUG: Log the actual cues to see their identifiers
-      // console.log('VTT Test Cues:', JSON.stringify(vttCues, null, 2)); // Removed this line
 
       // Check cue with identifier "1"
       const cue1 = vttCues.find(c => c.identifier === "1");

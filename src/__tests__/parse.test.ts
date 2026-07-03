@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { parse } from '../index';
+import { parse, parseSRT, parseVTT } from '../index';
 
 describe('parse function', () => {
     const srtContent = readFileSync(join(__dirname, 'fixtures/sample.srt'), 'utf-8');
@@ -47,5 +47,27 @@ describe('parse function', () => {
         expect(result.type).toBe('unknown');
         expect(result.cues).toHaveLength(0);
         expect(result.errors).toBeDefined();
+    });
+
+    test('should handle non-string runtime input', () => {
+        expect(() => parse(null as any)).not.toThrow();
+
+        const result = parse(null as any);
+        expect(result.type).toBe('unknown');
+        expect(result.cues).toHaveLength(0);
+        expect(result.errors?.[0].message).toBe('Input must be a string');
+    });
+
+    test('should handle direct parser non-string runtime input', () => {
+        expect(parseSRT(null as any)).toMatchObject({
+            type: 'srt',
+            cues: [],
+            errors: [{ line: 1, message: 'Input must be a string', severity: 'error' }]
+        });
+        expect(parseVTT(null as any)).toMatchObject({
+            type: 'vtt',
+            cues: [],
+            errors: [{ line: 1, message: 'Input must be a string', severity: 'error' }]
+        });
     });
 });
