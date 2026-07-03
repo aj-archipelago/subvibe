@@ -305,12 +305,19 @@ function parseVoiceSpans(text: string): { voice: string; text: string }[] | unde
   }));
 }
 
-function parseCueIndex(line: string): number | null {
-  const num = parseInt(line, 10);
-  return !isNaN(num) ? num : null;
-}
-
 export function parseVTT(content: string, options: ParseOptions = { preserveIndexes: true }): ParsedVTT {
+  if (typeof content !== 'string') {
+    return {
+      type: 'vtt',
+      cues: [],
+      errors: [{
+        line: 1,
+        message: 'Input must be a string',
+        severity: 'error'
+      }]
+    };
+  }
+
   const lines = content.trim().split(/\r?\n/);
   const cues: VTTSubtitleCue[] = [];
   const errors: ParseError[] = [];

@@ -8,6 +8,62 @@ import { detectFormat, extractFromMarkdown } from './core-utils';
 
 const defaultParseOptions: ParseOptions = { preserveIndexes: true };
 
+function invalidParseResult(message: string): ParsedSubtitles {
+    return {
+        type: 'unknown',
+        cues: [],
+        errors: [{
+            line: 1,
+            message,
+            severity: 'error'
+        }]
+    };
+}
+
+function normalizeCue(cue: unknown, fallbackIndex: number): SubtitleCue | null {
+    if (typeof cue !== 'object' || cue === null) {
+        return null;
+    }
+
+    const candidate = cue as Partial<SubtitleCue> & { text?: unknown };
+    if (!Number.isFinite(candidate.startTime) || !Number.isFinite(candidate.endTime)) {
+        return null;
+    }
+    if (candidate.text === null || candidate.text === undefined) {
+        return null;
+    }
+
+    return {
+        ...candidate,
+        index: Number.isFinite(candidate.index) ? candidate.index as number : fallbackIndex,
+        startTime: candidate.startTime as number,
+        endTime: candidate.endTime as number,
+        text: typeof candidate.text === 'string' ? candidate.text : String(candidate.text)
+    };
+}
+
+function normalizeCueArray(input: unknown): SubtitleCue[] {
+    if (!Array.isArray(input)) {
+        return [];
+    }
+
+    return input
+        .map((cue, index) => normalizeCue(cue, index + 1))
+        .filter((cue): cue is SubtitleCue => cue !== null);
+}
+
+function extractInputCues(input: unknown): SubtitleCue[] {
+    if (Array.isArray(input)) {
+        return normalizeCueArray(input);
+    }
+
+    if (typeof input === 'object' && input !== null && Array.isArray((input as Partial<ParsedSubtitles>).cues)) {
+        return normalizeCueArray((input as Partial<ParsedSubtitles>).cues);
+    }
+
+    return [];
+}
+
 /**
  * Parse subtitle content in either SRT or VTT format.
  * The format will be automatically detected based on the content.
@@ -29,6 +85,10 @@ const defaultParseOptions: ParseOptions = { preserveIndexes: true };
  * ```
  */
 function parse(content: string, providedOptions: ParseOptions = {}): ParsedSubtitles {
+    if (typeof content !== 'string') {
+        return invalidParseResult('Input must be a string');
+    }
+
     const options = { ...defaultParseOptions, ...providedOptions }; // Ensure defaults are applied
 
     const formatResult = detectFormat(content);
@@ -66,11 +126,7 @@ function parse(content: string, providedOptions: ParseOptions = {}): ParsedSubti
  * ```
  */
 function resync(cues: SubtitleCue[], options: TimeShiftOptions): SubtitleCue[] {
-    return SubtitleUtils.shiftTime(cues, options);
-}
-
-function isValidFormat(format: string): format is 'text' | 'srt' | 'vtt' {
-    return ['text', 'srt', 'vtt'].includes(format);
+    return SubtitleUtils.shiftTime(normalizeCueArray(cues), options);
 }
 
 /**
@@ -93,8 +149,8 @@ function isValidFormat(format: string): format is 'text' | 'srt' | 'vtt' {
  * ```
  */
 function build(input: ParsedSubtitles | SubtitleCue[], options: BuildOptions | 'srt' | 'vtt' | 'text' = {}): string {
-    const cues = Array.isArray(input) ? input : input.cues;
-    const inputType = Array.isArray(input) ? undefined : input.type;
+    const cues = extractInputCues(input);
+    const inputType = !Array.isArray(input) && typeof input === 'object' && input !== null ? input.type : undefined;
     
     // Handle legacy string parameter for backward compatibility
     const opts: BuildOptions = typeof options === 'string' 
@@ -112,7 +168,7 @@ function build(input: ParsedSubtitles | SubtitleCue[], options: BuildOptions | '
             return generateVTT({
                 type: 'vtt',
                 cues,
-                ...((!Array.isArray(input) && input.type === 'vtt') 
+                ...((!Array.isArray(input) && typeof input === 'object' && input !== null && input.type === 'vtt') 
                     ? {
                         styles: (input as ParsedVTT).styles,
                         regions: (input as ParsedVTT).regions

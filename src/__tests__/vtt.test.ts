@@ -840,19 +840,6 @@ And finally, you can hit control plus the forward slash key, and that allows you
     expect(result.cues[6].endTime).toBe(59915);
     const parsedText = result.cues[6].text;
     const expectedText = "And finally, you can hit control plus the forward slash key, and that allows you to comment out a line, or if you highlight a bunch of code, you can comment it all out at on...";
-    console.log('PARSED TEXT JSON:', JSON.stringify(parsedText));
-    console.log('EXPECTED TEXT JSON:', JSON.stringify(expectedText));
-    console.log('PARSED LENGTH:', parsedText.length);
-    console.log('EXPECTED LENGTH:', expectedText.length);
-    if (parsedText.length === expectedText.length && parsedText !== expectedText) {
-      for (let k = 0; k < parsedText.length; k++) {
-        if (parsedText.charCodeAt(k) !== expectedText.charCodeAt(k)) {
-          console.log(`Char diff at index ${k}: Parsed=${parsedText.charCodeAt(k)} (${parsedText[k]}), Expected=${expectedText.charCodeAt(k)} (${expectedText[k]})`);
-        }
-      }
-    } else if (parsedText.length !== expectedText.length) {
-      console.log('LENGTHS DIFFER');
-    }
     expect(parsedText).toBe(expectedText);
   });
 

@@ -57,6 +57,18 @@ export function parseTimestamp(timestamp: string): number {
 }
 
 export function parseSRT(content: string, options: ParseOptions = {}): ParsedSubtitles {
+  if (typeof content !== 'string') {
+    return {
+      type: 'srt',
+      cues: [],
+      errors: [{
+        line: 1,
+        message: 'Input must be a string',
+        severity: 'error'
+      }]
+    };
+  }
+
   const lines = content.trim().split(/\r?\n/);
   log("\n=== Starting new parse ===");
   log("Input lines:", lines);
